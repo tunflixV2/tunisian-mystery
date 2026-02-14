@@ -3,32 +3,202 @@ const express = require('express');
 const http = require('http');
 const { Server } = require("socket.io");
 const path = require('path');
-const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
-// --- CONFIG ---
-// ⚠️ تأكد أن هذا المفتاح جديد وصحيح
-const API_KEY = "AIzaSyDBDNnDyvUqdaySHOiRmeFJpfrXmSDHAJQ"; 
-const genAI = new GoogleGenerativeAI(API_KEY);
-// استعملنا flash خاطر أسرع وأرخص في الـ Quota
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-// --- BACKUP MYSTERIES (للطوارئ فقط) ---
-const backupMysteries = [
+// --- 20 TUNISIAN MYSTERIES DATABASE ---
+const mysteriesDB = [
     {
-        title: "جريمة الـ Offline (احتياطية)",
-        story: "الذكاء الاصطناعي تعب.. ياخي دورناها جريمة كلاسيكية. (صالح) تقتل في القهوة.",
+        title: "ليلة الدم في عرس سوسة",
+        story: "في عرس كبير في سوسة، العريس يختفي قبل تقطيع الكيك. تلقاوه في غرفة التبديل مطعون بسكينة الحلويات. القاعة مسكّرة، والقاتل واحد منكم.",
+        killerDesc: "اللي لابس بدلة زرقاء وعندو ساعة ذهب كبيرة",
         clues: [
-            "الضحية مضروب بـ كاس تاي.",
-            "مولى القهوة شاف (القاتل) هارب.",
-            "القاتل نسى تليفونو فوق الطاولة.",
-            "القاتل هو (القاتل)."
+            "الباب مسكّر من الداخل، ما فماش كسر.",
+            "ساعة ذهب طايحة تحت الطاولة.",
+            "الكاميرا تورّي بدلة زرقاء داخلة قبل 7 دقايق.",
+            "بصمات (القاتل) على السكينة."
         ],
-        rumors: ["فما شكون يسرق في الويفي", "ريت فلان يبدل في حوايجو"],
-        secrets: [{ task: "قول للناس الكل اللي انت شاكك في روحك" }]
+        rumors: ["شافو واحد يغسل يديه ومربك.", "سمعو عركة قديمة على فلوس."],
+        secret: "دافع على صاحب البدلة الزرقاء ويشكك في الكاميرا."
+    },
+    {
+        title: "غدرة في رحلة بحرية",
+        story: "في يخت خاص، واحد يطيح في البحر بالليل. الصباح يلقاو جاكيته مقصوصة.",
+        killerDesc: "اللي عندو وشم حوت في يدو اليسار",
+        clues: [
+            "الجاكيتة مقصوصة بسكين صغير.",
+            "سكين مطبخ ناقص من اليخت.",
+            "الكاميرا تورّي وشم واضح.",
+            "آثار ملح على سروال (القاتل)."
+        ],
+        rumors: ["الضحية كان مديون.", "واحد قال 'يا ليتو يختفي'."],
+        secret: "ركّز الحديث على الديون."
+    },
+    {
+        title: "سر الفيلا المهجورة",
+        story: "دخلتو فيلا مهجورة كتحدي. واحد ما خرجش. تلقاوه مخنوق في القبو.",
+        killerDesc: "اللي كان دايماً يقول 'أنا ما نخافش'",
+        clues: [
+            "ما فماش آثار كسر.",
+            "حبل في شنطة (القاتل).",
+            "فيديو يوري (القاتل) نازل وحدو للقبو.",
+            "ألياف الحبل تطابق."
+        ],
+        rumors: ["الضحية كان باش يكشف سر.", "واحد خرج قبل الوقت."],
+        secret: "دافع على صاحب الحبل."
+    },
+    {
+        title: "السم في القهوة",
+        story: "في قعدة، واحد يشرب قهوة ويطيح ميت.",
+        killerDesc: "اللي حضّر القهوة",
+        clues: [
+            "السم كان في فنجان واحد.",
+            "(القاتل) وحدو كان في المطبخ.",
+            "بصمات (القاتل) على علبة السم.",
+            "بحث في تلفون (القاتل) على جرعة قاتلة."
+        ],
+        rumors: ["الضحية يخون مرتو.", "واحد بدّل الفناجين."],
+        secret: "اتهم اللي بدّل الفناجين."
+    },
+    {
+        title: "فلوس الرحلة",
+        story: "فلوس الرحلة تختفي وواحد يتلقى مضروب.",
+        killerDesc: "اللي حذاؤو أبيض ومتوسخ بالطين",
+        clues: [
+            "الطين نفسو قدام المخزن.",
+            "بصمات على الحقيبة.",
+            "كاميرا تورّي الحذاء الأبيض.",
+            "الفلوس في سيارة (القاتل)."
+        ],
+        rumors: ["الضحية بدّل الوجهة.", "شافوه يجري."],
+        secret: "قلل من أهمية دليل الحذاء."
+    },
+    {
+        title: "حريق المخيم",
+        story: "النار شعلت في المخيم والضحية تحرق.",
+        killerDesc: "مسؤول الغاز",
+        clues: ["ريحة بنزين قوية.", "دبوسة الغاز محلولة.", "ولاعة (القاتل) فيها آثار بنزين.", "شهود شافو (القاتل) بحذا الخيمة."],
+        rumors: ["واحد كان يتشكى من البرد.", "فما عركة على بلاصة النوم."],
+        secret: "اتهم اللي يتشكى من البرد."
+    },
+    {
+        title: "حادث في الجيم",
+        story: "واحد تطيح عليه حديدة ويموت مخنوق.",
+        killerDesc: "اللي يلبس قفازات سود",
+        clues: ["الكاميرا كانت مسكرة.", "آثار خنق على الرقبة.", "قفازات سود بحذا الجثة.", "بصمات (القاتل) على الحديدة."],
+        rumors: ["الضحية كان يفرك فيهم.", "فما غيرة رياضية."],
+        secret: "قول اللي هو حادث قضاء وقدر."
+    },
+    {
+        title: "ليلة رأس السنة",
+        story: "في وسط الاحتفال، واحد يطيح ميت.",
+        killerDesc: "اللي جاب الألعاب النارية",
+        clues: ["ريحة بارود قوية.", "أصابع (القاتل) محروقة.", "مادة متفجرة في جيب (القاتل).", "رسالة تهديد."],
+        rumors: ["كانو يتعاركو.", "الضحية سكران."],
+        secret: "دافع على اللي جاب الفوشيك."
+    },
+    {
+        title: "اختفاء في رحلة جبل",
+        story: "واحد ضاع في الجبل ولقاوه ميت في حفرة.",
+        killerDesc: "اللي كان ماسك الخريطة",
+        clues: ["المسار متبدل بالعاني.", "آثار دفع من الخلف.", "الخريطة عند (القاتل).", "شهادة: (القاتل) قالو برا من هنا."],
+        rumors: ["الضحية تعب.", "فما ذيب في الجبل."],
+        secret: "قول اللي هو طاح وحدو."
+    },
+    {
+        title: "جريمة في بيت الطلبة",
+        story: "طالب لقاوه ميت في بيتو والباب مسكر.",
+        killerDesc: "اللي عندو مفاتيح إضافية",
+        clues: ["ما فماش كسر.", "نسخة مفتاح عند (القاتل).", "كاميرا العمارة صورت (القاتل).", "دم على مفتاح (القاتل)."],
+        rumors: ["يسمع في موسيقى عالية.", "عركة على الكراء."],
+        secret: "شكك في جودة الكاميرا."
+    },
+    {
+        title: "تسمم في شواء",
+        story: "شواء في الغابة، واحد كلا ومات.",
+        killerDesc: "اللي جاب اللحم",
+        clues: ["اللحم كان فيه ريحة غريبة.", "مادة سامة في شنطة (القاتل).", "(القاتل) ما كلا شوا.", "التحاليل أثبتت التسمم."],
+        rumors: ["اللحم فاسد.", "الضحية عندو حساسية."],
+        secret: "قول اللي اللحم فاسد مش مسموم."
+    },
+    {
+        title: "سرقة محل",
+        story: "محل تسرق ومولاه تقتل.",
+        killerDesc: "اللي كان يخدم part-time",
+        clues: ["الخزنة محلولة بالكود.", "بصمات (القاتل) على الخزنة.", "غياب (القاتل) وقت الجريمة.", "الفلوس مخبية عند (القاتل)."],
+        rumors: ["عندو ديون.", "المولى ظالم."],
+        secret: "دافع على الخدام."
+    },
+    {
+        title: "غدرة في مقابلة كورة",
+        story: "في وسط الماتش، ملاعبي يطيح وما يقومش.",
+        killerDesc: "اللي كان احتياطي",
+        clues: ["ضربة متعمدة.", "دفعو قدام الكاميرا.", "حذاء (القاتل) فيه دم.", "شهود سمعو تهديد."],
+        rumors: ["الحارس بلعاني.", "الضحية يمثل."],
+        secret: "اتهم الحارس."
+    },
+    {
+        title: "جريمة في سهرة رعب",
+        story: "سهرة أفلام رعب، واحد مات بالحق.",
+        killerDesc: "اللي جاب قناع أسود",
+        clues: ["سلاح حقيقي بدل اللعبة.", "ألياف القناع في مسرح الجريمة.", "قناع (القاتل) فيه دم.", "بصمات (القاتل)."],
+        rumors: ["كان يصرخ برشا.", "فيلم رعب ولا حقيقة."],
+        secret: "قول اللي هو يمثل."
+    },
+    {
+        title: "حادث سيارة متعمد",
+        story: "كرهبة تقلبت والفرامل مقطوعة.",
+        killerDesc: "اللي كان يسوق قبلو",
+        clues: ["الفرامل مقطوعة بآلة حادة.", "آثار زيت على يد (القاتل).", "كاميرا الكياس.", "شهادة الميكانيسيان."],
+        rumors: ["كان سكران.", "الطريق خايب."],
+        secret: "لوم على حالة الكياس."
+    },
+    {
+        title: "سر في مشروع مشترك",
+        story: "شريك تقتل في بيروه.",
+        killerDesc: "الشريك الثاني",
+        clues: ["تحويل بنكي مشبوه.", "عركة قبل بنهار.", "بصمات (القاتل) على الملف.", "سلاح في مكتب (القاتل)."],
+        rumors: ["الموظف يسرق.", "إفلاس الشركة."],
+        secret: "اتهم الموظف."
+    },
+    {
+        title: "موت في مسبح",
+        story: "حفلة مسبح، واحد غرق.",
+        killerDesc: "اللي يعرف يعوم مليح",
+        clues: ["خدوش على ذراع الضحية.", "آثار خنق تحت الماء.", "(القاتل) كان بحذاه.", "ساعة الضحية عند (القاتل)."],
+        rumors: ["ما يعرفش يعوم.", "تشنج عضلي."],
+        secret: "قول اللي هو غرق وحدو."
+    },
+    {
+        title: "تسمم في حفلة عيد ميلاد",
+        story: "عيد ميلاد، الضحية كلا القاطو ومات.",
+        killerDesc: "اللي قصّ الكيك",
+        clues: ["السم في طرف السكينة.", "سم في جيب (القاتل).", "(القاتل) أصر باش يقص.", "بصمات على السكينة."],
+        rumors: ["يغار من الضحية.", "القاطو بايت."],
+        secret: "لوم على مولى الباتيسري."
+    },
+    {
+        title: "اختفاء في مهرجان",
+        story: "في الزحمة، واحد تقتل.",
+        killerDesc: "اللي كان ماسك السماعات",
+        clues: ["تسجيل صوتي فيه تهديد.", "سكينة في جيب (القاتل).", "دم على حوايج (القاتل).", "شهود شافو العركة."],
+        rumors: ["كان يتعارك.", "الزحمة هي السبب."],
+        secret: "قول اللي هي عركة عادية."
+    },
+    {
+        title: "الخيانة الأخيرة",
+        story: "مجموعة صحاب عاملين مشروع كبير. واحد منهم يلقى روحو ميت في المكتب.",
+        killerDesc: "اللي دايماً ساكت وما يتكلمش برشا",
+        clues: [
+            "ما فماش كسر في الباب.",
+            "عقد شراكة ممزق.",
+            "تسجيل كاميرا يوري (القاتل) داخل آخر واحد.",
+            "رسالة في تلفون (القاتل) تهدد الضحية."
+        ],
+        rumors: ["الموظف يسرق.", "الضحية عندو علاقة سرية."],
+        secret: "ازرع الشك في الموظف."
     }
 ];
 
@@ -40,181 +210,152 @@ let intervals = [];
 
 app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'index.html')); });
 
-// --- SMART AI FUNCTION ---
-async function generateMystery(playerList) {
-    const playerNames = playerList.map(p => p.name).join(", ");
-    const killerName = playerList[Math.floor(Math.random() * playerList.length)].name;
+function pickMystery(playerList) {
+    // 1. Pick random mystery
+    const template = mysteriesDB[Math.floor(Math.random() * mysteriesDB.length)];
 
-    const prompt = `
-    Role: Tunisian Mystery Writer.
-    Players: ${playerNames}.
-    Killer: ${killerName}.
+    // 2. Pick random killer
+    const killer = playerList[Math.floor(Math.random() * playerList.length)];
 
-    Task: Write a murder mystery in Tunisian Dialect.
-    JSON Format ONLY:
-    {
-      "title": "Title in Tunisian",
-      "story": "Short story (max 30 words)",
-      "killer": "${killerName}",
-      "clues": ["Clue 1 (vague)", "Clue 2", "Clue 3", "Clue 4 (revealing but no name)"],
-      "rumors": ["Rumor 1", "Rumor 2"],
-      "secrets": [{"player": "Name", "task": "Secret Task"}]
-    }
-    `;
+    // 3. Inject Killer Name into clues/story
+    let finalClues = template.clues.map(c => c.replace("(القاتل)", killer.name));
+    let finalRumors = template.rumors.map(r => r.replace("(القاتل)", killer.name));
+    let finalSecret = template.secret ? template.secret.replace("(القاتل)", killer.name) : null;
 
-    try {
-        console.log("🤖 Sending request to Gemini...");
-        const result = await model.generateContent(prompt);
-        const text = result.response.text();
-        console.log("📩 Raw AI Response:", text); // Debug Log
-
-        // --- SMART CLEANER ---
-        // يلوج على أول { وآخر } باش ينحي أي كتيبة زايدة
-        const jsonStart = text.indexOf('{');
-        const jsonEnd = text.lastIndexOf('}') + 1;
-
-        if (jsonStart === -1 || jsonEnd === 0) throw new Error("No JSON found");
-
-        const cleanJson = text.substring(jsonStart, jsonEnd);
-        const mystery = JSON.parse(cleanJson);
-
-        // تأكد أن القاتل موجود في القائمة
-        if (!playerNames.includes(mystery.killer)) mystery.killer = killerName;
-
-        console.log("✅ Mystery Generated Successfully!");
-        return mystery;
-
-    } catch (error) {
-        console.error("❌ AI Error:", error.message);
-        // Backup
-        let backup = backupMysteries[0];
-        backup.killer = killerName; 
-        return backup;
-    }
+    return {
+        title: template.title,
+        story: template.story,
+        killer: killer.name,
+        killerDesc: template.killerDesc, // Extra flavor text
+        clues: finalClues,
+        rumors: finalRumors,
+        secretTask: finalSecret
+    };
 }
 
 io.on('connection', (socket) => {
-  console.log('User joined:', socket.id);
 
-  socket.on('joinGame', (name) => {
-    if (gameStarted) return socket.emit('errorMsg', '⏳ الطرح بدا! استنى.');
-    players[socket.id] = { id: socket.id, name: name, role: 'citizen', isDead: false, hasVoted: false };
-    io.emit('updatePlayerList', Object.values(players));
-  });
+    socket.on('joinGame', (name) => {
+        if (gameStarted) return socket.emit('errorMsg', 'الطرح بدا!');
+        players[socket.id] = { id: socket.id, name: name, role: 'citizen', isDead: false, hasVoted: false };
+        io.emit('updatePlayerList', Object.values(players));
+    });
 
-  socket.on('startGame', async () => {
-    const playerValues = Object.values(players);
-    // Allow 1 player for testing
-    if (playerValues.length < 1) return io.emit('errorMsg', 'زيد دخل صحابك!'); 
+    socket.on('startGame', () => {
+        const playerValues = Object.values(players);
+        if (playerValues.length < 1) return io.emit('errorMsg', 'زيد دخل عباد!'); 
 
-    io.emit('loadingState', true);
-    gameStarted = true;
+        // 1. Generate Local Mystery
+        currentMystery = pickMystery(playerValues);
 
-    // Generate Mystery
-    currentMystery = await generateMystery(playerValues);
+        gameStarted = true;
+        intervals.forEach(clearInterval); intervals = [];
+        currentClueIndex = 0;
 
-    // Reset & Assign
-    intervals.forEach(clearInterval); intervals = [];
-    currentClueIndex = 0;
+        // 2. Assign Roles
+        playerValues.forEach(p => {
+            p.isDead = false; p.hasVoted = false;
 
-    playerValues.forEach(p => {
-        p.isDead = false; p.hasVoted = false;
+            if (p.name === currentMystery.killer) {
+                p.role = 'killer';
+                io.to(p.id).emit('gameInit', { 
+                    role: 'killer', 
+                    title: currentMystery.title, 
+                    story: currentMystery.story + "\n🔴 وصفك: " + currentMystery.killerDesc 
+                });
+            } else {
+                p.role = 'citizen';
+                io.to(p.id).emit('gameInit', { 
+                    role: 'citizen', 
+                    title: currentMystery.title, 
+                    story: currentMystery.story 
+                });
 
-        if (p.name === currentMystery.killer) {
-            p.role = 'killer';
-            io.to(p.id).emit('gameInit', { role: 'killer', data: currentMystery });
-        } else {
-            p.role = 'citizen';
-            io.to(p.id).emit('gameInit', { role: 'citizen', data: currentMystery });
-        }
+                // Assign Secret Task to ONE innocent player
+                if (currentMystery.secretTask && Math.random() > 0.5) {
+                    io.to(p.id).emit('secretTask', currentMystery.secretTask);
+                }
+            }
+        });
 
-        if (currentMystery.secrets && currentMystery.secrets.length > 0) {
-            const secret = currentMystery.secrets.find(s => s.player === p.name);
-            if (secret && p.role !== 'killer') io.to(p.id).emit('secretTask', secret.task);
+        io.emit('systemMessage', `🚨 **${currentMystery.title}** 🚨\n${currentMystery.story}`);
+
+        // 3. Loops
+        startLoops();
+    });
+
+    function startLoops() {
+        // Clues Loop (30s)
+        const clueInt = setInterval(() => {
+            if (!gameStarted) return;
+            if (currentClueIndex < currentMystery.clues.length) {
+                const clue = currentMystery.clues[currentClueIndex];
+                io.emit('newClue', clue);
+                io.emit('playAudio', "دليل جديد");
+                currentClueIndex++;
+            } else {
+                clearInterval(clueInt);
+                io.emit('systemMessage', "⛔ وفات الأدلة! وقت التصويت!");
+                io.emit('startVoting');
+                io.emit('playAudio', "وقت التصويت");
+            }
+        }, 30000);
+        intervals.push(clueInt);
+
+        // Rumors Loop (Randomly send to one player)
+        const rumorInt = setInterval(() => {
+            if (!gameStarted) return;
+            const rumor = currentMystery.rumors[Math.floor(Math.random() * currentMystery.rumors.length)];
+            const pIds = Object.keys(players);
+            const target = pIds[Math.floor(Math.random() * pIds.length)];
+            io.to(target).emit('privateRumor', rumor);
+        }, 25000);
+        intervals.push(rumorInt);
+    }
+
+    socket.on('chatMessage', (msg) => {
+        const p = players[socket.id];
+        if (p && !p.isDead) io.emit('newChat', { name: p.name, msg: msg });
+    });
+
+    socket.on('killPlayer', (targetName) => {
+        const killer = players[socket.id];
+        if (!killer || killer.role !== 'killer' || killer.isDead) return;
+
+        const targetId = Object.keys(players).find(k => players[k].name === targetName);
+        if (targetId && !players[targetId].isDead) {
+            players[targetId].isDead = true;
+            io.emit('playerDied', { name: targetName });
+            io.to(targetId).emit('youDied');
+            io.emit('systemMessage', `🚨 **${targetName}** مات مقتول!`);
+            io.emit('playAudio', "جريمة قتل");
+            io.emit('startVoting');
+
+            const alive = Object.values(players).filter(p => !p.isDead).length;
+            if (alive <= 1) endGame('killer', killer.name);
         }
     });
 
-    io.emit('loadingState', false);
-    io.emit('systemMessage', `🚨 **${currentMystery.title}** 🚨\n${currentMystery.story}`);
+    socket.on('votePlayer', (targetName) => {
+        const p = players[socket.id];
+        if (!p || p.hasVoted) return;
+        p.hasVoted = true;
+        // Logic simplification: just log vote
+    });
 
-    startLoops();
-  });
+    function endGame(winner, name) {
+        gameStarted = false;
+        intervals.forEach(clearInterval);
+        io.emit('gameOver', { winner, msg: winner === 'killer' ? `🔪 القاتل (${name}) ربح!` : `👮 المواطنين ربحوا!` });
+    }
 
-  function startLoops() {
-      // Clues Loop
-      const clueInt = setInterval(() => {
-          if (!gameStarted) return;
-          if (currentClueIndex < currentMystery.clues.length) {
-              let clue = currentMystery.clues[currentClueIndex];
-              if (clue.includes("(القاتل)")) clue = clue.replace("(القاتل)", currentMystery.killer);
-
-              io.emit('newClue', clue);
-              io.emit('playAudio', "دليل جديد"); 
-              currentClueIndex++;
-          } else {
-              clearInterval(clueInt);
-              io.emit('systemMessage', "⛔ وفات الأدلة! وقت التصويت!");
-              io.emit('startVoting');
-              io.emit('playAudio', "وقت التصويت");
-          }
-      }, 30000); // 30s
-      intervals.push(clueInt);
-
-      // Rumors Loop
-      const rumorInt = setInterval(() => {
-          if (!gameStarted || !currentMystery.rumors) return;
-          const rumor = currentMystery.rumors[Math.floor(Math.random() * currentMystery.rumors.length)];
-          const pIds = Object.keys(players);
-          const target = pIds[Math.floor(Math.random() * pIds.length)];
-          io.to(target).emit('privateRumor', rumor);
-      }, 20000); // 20s
-      intervals.push(rumorInt);
-  }
-
-  socket.on('chatMessage', (msg) => {
-    const p = players[socket.id];
-    if (p && !p.isDead) io.emit('newChat', { name: p.name, msg: msg });
-  });
-
-  socket.on('killPlayer', (targetName) => {
-      const killer = players[socket.id];
-      if (!killer || killer.role !== 'killer' || killer.isDead) return;
-
-      const targetId = Object.keys(players).find(k => players[k].name === targetName);
-      if (targetId && !players[targetId].isDead) {
-          players[targetId].isDead = true;
-          io.emit('playerDied', { name: targetName });
-          io.to(targetId).emit('youDied');
-          io.emit('systemMessage', `🚨 **${targetName}** مات مقتول!`);
-          io.emit('playAudio', "جريمة قتل");
-          io.emit('startVoting'); 
-
-          const alive = Object.values(players).filter(p => !p.isDead).length;
-          if (alive <= 1) endGame('killer', killer.name);
-      }
-  });
-
-  socket.on('votePlayer', (targetName) => {
-      const player = players[socket.id];
-      if (!player || player.hasVoted) return;
-      player.hasVoted = true;
-      // Simple logic: just acknowledge vote for now
-      // In real game: implement tally logic here
-  });
-
-  function endGame(winner, name) {
-      gameStarted = false;
-      intervals.forEach(clearInterval);
-      io.emit('gameOver', { winner, msg: winner === 'killer' ? `🔪 القاتل (${name}) ربح!` : `👮 المواطنين ربحوا!` });
-  }
-
-  socket.on('disconnect', () => {
-      delete players[socket.id];
-      io.emit('updatePlayerList', Object.values(players));
-      if (gameStarted && Object.keys(players).length < 1) {
-          gameStarted = false; intervals.forEach(clearInterval);
-      }
-  });
+    socket.on('disconnect', () => {
+        delete players[socket.id];
+        io.emit('updatePlayerList', Object.values(players));
+        if (gameStarted && Object.keys(players).length < 1) {
+             gameStarted = false; intervals.forEach(clearInterval);
+        }
+    });
 });
 
 server.listen(3000, () => console.log('Server 3000'));

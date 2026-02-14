@@ -7,129 +7,138 @@
     <title>🕵️ المحقق التونسي</title>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        :root { --main-color: #e50914; --bg-color: #000000; --card-bg: #1f1f1f; --text-color: #ffffff; }
+        :root { --main-color: #e50914; --bg-color: #0d0d0d; --card-bg: #1f1f1f; --text-color: #ffffff; }
         body { font-family: 'Tajawal', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
         /* SCREENS */
         .screen { display: none; flex-direction: column; height: 100%; padding: 20px; box-sizing: border-box; }
         .active { display: flex !important; }
 
-        /* LOBBY UI */
-        .logo-area { text-align: center; margin-top: 40px; margin-bottom: 20px; }
-        h1 { font-size: 2.5em; margin: 0; color: var(--main-color); text-transform: uppercase; letter-spacing: 2px; }
-        p.subtitle { color: #888; margin-top: 5px; }
+        /* LOBBY */
+        .logo-area { text-align: center; margin-top: 40px; margin-bottom: 20px; animation: fadeIn 2s; }
+        h1 { font-size: 2.5em; margin: 0; color: var(--main-color); text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 10px rgba(229, 9, 20, 0.5); }
 
         input, select {
             background: #333; border: 1px solid #444; color: white; padding: 15px; 
-            border-radius: 8px; font-size: 1.1em; width: 100%; box-sizing: border-box; text-align: center; margin-bottom: 10px;
+            border-radius: 25px; font-size: 1.1em; width: 100%; box-sizing: border-box; text-align: center; margin-bottom: 10px;
         }
         input:focus { border-color: var(--main-color); outline: none; }
 
         button {
             background: var(--main-color); color: white; border: none; padding: 15px; 
-            border-radius: 8px; font-size: 1.2em; font-weight: bold; width: 100%; cursor: pointer;
+            border-radius: 25px; font-size: 1.2em; font-weight: bold; width: 100%; cursor: pointer;
             box-shadow: 0 4px 15px rgba(229, 9, 20, 0.4); transition: 0.2s;
         }
-        button:active { transform: scale(0.98); }
-        button:disabled { background: #555; opacity: 0.7; }
+        button:active { transform: scale(0.95); }
+        .btn-green { background: #27ae60; box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4); }
 
-        /* LIST */
-        ul { list-style: none; padding: 0; margin: 0; width: 100%; }
-        li { background: var(--card-bg); margin: 5px 0; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #444; }
+        /* CHAT (Messenger Style) */
+        #chat-box { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-bottom: 10px; scroll-behavior: smooth; }
+        .msg { padding: 10px 14px; border-radius: 18px; font-size: 0.95em; line-height: 1.4; max-width: 80%; word-wrap: break-word; position: relative; }
 
-        /* GAME UI */
-        #role-card { background: #222; padding: 15px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #333; text-align: center; }
-        .role-killer { border-color: var(--main-color); box-shadow: 0 0 10px rgba(229, 9, 20, 0.2); }
-        .role-citizen { border-color: #2ecc71; }
+        .msg.me { align-self: flex-start; background: #0084ff; color: white; border-bottom-right-radius: 4px; }
+        .msg.other { align-self: flex-end; background: #3e4042; color: white; border-bottom-left-radius: 4px; }
 
-        #chat-box { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-bottom: 10px; }
-        .msg { padding: 10px 14px; border-radius: 12px; font-size: 0.95em; line-height: 1.4; max-width: 85%; align-self: flex-start; background: #333; }
-        .msg strong { display: block; font-size: 0.8em; color: #bbb; margin-bottom: 2px; }
+        .msg strong { display: block; font-size: 0.75em; opacity: 0.8; margin-bottom: 2px; }
 
-        .msg.clue { background: #d35400; color: white; border-right: 4px solid #f1c40f; align-self: center; width: 90%; text-align: center; }
-        .msg.rumor { background: #8e44ad; color: white; align-self: center; width: 90%; font-style: italic; }
-        .msg.sys { background: transparent; color: #888; text-align: center; font-size: 0.8em; width: 100%; border: none; }
+        .msg.clue { align-self: center; background: #d35400; color: white; border-radius: 12px; width: 90%; text-align: center; border: 1px solid #e67e22; animation: popIn 0.5s; }
+        .msg.rumor { align-self: center; background: #8e44ad; color: white; border-radius: 12px; width: 90%; text-align: center; font-style: italic; border: 1px solid #9b59b6; }
+        .msg.sys { align-self: center; background: transparent; color: #888; font-size: 0.8em; width: 100%; text-align: center; margin: 10px 0; border: none; }
 
         /* CONTROLS */
-        .controls-area { margin-top: auto; padding-top: 10px; border-top: 1px solid #333; }
-        .input-group { display: flex; gap: 10px; }
+        .controls-area { margin-top: auto; padding-top: 10px; border-top: 1px solid #333; background: #1a1a1a; padding-bottom: 10px; }
+        .input-group { display: flex; gap: 10px; align-items: center; }
+        #msg-input { border-radius: 20px; padding: 12px; flex-grow: 1; margin: 0; background: #2c2c2c; border: none; }
+        #send-btn { width: auto; padding: 10px 20px; margin: 0; border-radius: 50%; background: #0084ff; display: flex; align-items: center; justify-content: center; }
 
-        /* LOADING */
-        #loading-screen { justify-content: center; align-items: center; background: rgba(0,0,0,0.9); position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 999; }
-        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--main-color); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* KILLER UI */
+        #killer-ui { display:none; background: #2c0b0e; padding: 10px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #e50914; }
+        .cooldown-bar { height: 4px; background: #555; width: 100%; margin-top: 5px; border-radius: 2px; overflow: hidden; }
+        .cooldown-fill { height: 100%; background: #e50914; width: 0%; transition: width 1s linear; }
+
+        /* ANIMATIONS */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
     </style>
 </head>
 <body>
 
-    <!-- LOADING OVERLAY -->
-    <div id="loading-screen" style="display:none;">
-        <div class="spinner"></div>
-        <p style="margin-top: 20px;">قاعد نحضر في الجريمة...</p>
-    </div>
+    <!-- AUDIO ELEMENTS -->
+    <!-- Suspense Background Loop -->
+    <audio id="bg-music" loop>
+        <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+    </audio>
+    <!-- SFX -->
+    <audio id="sfx-msg" src="https://freesound.org/data/previews/234/234526_4019029-lq.mp3"></audio>
+    <audio id="sfx-kill" src="https://freesound.org/data/previews/415/415079_5121236-lq.mp3"></audio>
+    <audio id="sfx-vote" src="https://freesound.org/data/previews/466/466852_7138092-lq.mp3"></audio>
 
     <!-- LOBBY -->
     <div id="lobby-screen" class="screen active">
         <div class="logo-area">
             <h1>🕵️ المحقق</h1>
-            <p class="subtitle">لعبة الغموض والرعب التونسي</p>
+            <p style="color:#aaa;">لعبة الرعب التونسي</p>
         </div>
 
         <div style="flex-grow: 1; overflow-y: auto;">
-            <input type="text" id="username" placeholder="اكتب اسمك هنا..." maxlength="12">
+            <input type="text" id="username" placeholder="اكتب اسمك..." maxlength="12">
             <button onclick="joinGame()" id="join-btn">دخول</button>
-
-            <h3 style="margin-top: 30px; color: #666;">شكون دخل (Waiting Room):</h3>
+            <h3 style="margin-top: 20px; color: #666; font-size: 0.9em;">شكون دخل:</h3>
             <ul id="player-list"></ul>
         </div>
 
-        <button onclick="startGame()" style="background: #27ae60; margin-top: 10px;">🚀 ابدا الطرح</button>
+        <button onclick="startGame()" class="btn-green">🚀 ابدا الطرح</button>
     </div>
 
     <!-- GAME -->
     <div id="game-screen" class="screen">
-        <div id="role-card">
-            <h2 id="role-title" style="margin: 0; font-size: 1.5em;">...</h2>
-            <p id="case-text" style="color: #aaa; font-size: 0.9em; margin: 5px 0;">...</p>
+        <!-- Role Header -->
+        <div id="role-card" style="background: #222; padding: 15px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #333; text-align: center;">
+            <h2 id="role-title" style="margin: 0; color: #fff;">...</h2>
+            <p id="case-text" style="color: #aaa; font-size: 0.8em; margin: 5px 0;">...</p>
         </div>
 
-        <div id="secret-box" style="display:none; background: #16a085; padding: 10px; border-radius: 8px; margin-bottom: 10px; font-size: 0.9em;">
+        <!-- Secret Task -->
+        <div id="secret-box" style="display:none; background: #16a085; padding: 10px; border-radius: 8px; margin-bottom: 10px; font-size: 0.9em; animation: popIn 0.5s;">
             🤫 <strong>مهمة سرية:</strong> <span id="secret-text"></span>
         </div>
 
+        <!-- Chat -->
         <div id="chat-box"></div>
 
-        <!-- ACTIONS -->
+        <!-- Controls -->
         <div class="controls-area">
-            <!-- KILLER UI -->
-            <div id="killer-ui" style="display:none; margin-bottom: 10px;">
-                <select id="kill-select"><option>اختار الضحية...</option></select>
-                <button onclick="killPlayer()" style="background: var(--main-color);">🔪 تصفية</button>
+            <!-- Killer Actions -->
+            <div id="killer-ui">
+                <div style="display: flex; gap: 5px;">
+                    <select id="kill-select" style="margin:0;"><option>الضحية...</option></select>
+                    <button id="kill-btn" onclick="killPlayer()" style="width: 40%; margin:0; font-size: 1em;">🔪 تصفية</button>
+                </div>
+                <div class="cooldown-bar"><div id="cooldown-fill" class="cooldown-fill"></div></div>
+                <p id="cooldown-text" style="color: #e50914; font-size: 0.8em; text-align: center; margin: 5px 0 0 0; display: none;">Wait...</p>
             </div>
 
-            <!-- VOTE UI -->
-            <div id="vote-ui" style="display:none; margin-bottom: 10px; background: #2980b9; padding: 10px; border-radius: 8px;">
-                <h3 style="margin:0 0 5px 0; font-size: 1em;">تصويت طارئ!</h3>
-                <select id="vote-select"><option>شكون القاتل؟</option></select>
-                <button onclick="votePlayer()" style="background: #f1c40f; color: black;">تأكيد</button>
+            <!-- Vote Actions -->
+            <div id="vote-ui" style="display:none; margin-bottom: 10px; background: #2980b9; padding: 10px; border-radius: 8px; animation: popIn 0.5s;">
+                <h3 style="margin:0 0 5px 0; font-size: 1em; color: white;">تصويت طارئ!</h3>
+                <select id="vote-select" style="margin-bottom: 5px;"><option>شكون القاتل؟</option></select>
+                <button onclick="votePlayer()" style="background: #f1c40f; color: black; margin:0;">تأكيد</button>
             </div>
 
-            <!-- CHAT INPUT -->
+            <!-- Chat Input -->
             <div class="input-group">
-                <input type="text" id="msg-input" placeholder="اكتب ميساج..." style="margin:0;">
-                <button onclick="sendMessage()" style="width: 30%; margin:0; background: #444;">بعث</button>
+                <input type="text" id="msg-input" placeholder="اكتب ميساج...">
+                <button id="send-btn" onclick="sendMessage()">➤</button>
             </div>
         </div>
     </div>
 
-    <!-- DEAD SCREEN -->
+    <!-- DEAD & WIN SCREENS -->
     <div id="dead-screen" class="screen" style="justify-content: center; background: #300; text-align: center;">
         <h1 style="font-size: 4em;">💀 متّ!</h1>
-        <p>الله يرحمك.. كمل تفرج ساكت.</p>
+        <button onclick="location.reload()" style="background: transparent; border: 1px solid white;">Replay</button>
     </div>
-
-    <!-- WIN SCREEN -->
     <div id="win-screen" class="screen" style="justify-content: center; text-align: center;">
         <h1 id="win-title" style="color: #f1c40f;"></h1>
         <button onclick="location.reload()">🔄 طرح جديد</button>
@@ -139,42 +148,63 @@
     <script>
         const socket = io();
         let myName = "";
+        let isKiller = false;
 
-        // UI HELPERS
+        // --- AUDIO MANAGER ---
+        const bgMusic = document.getElementById('bg-music');
+        bgMusic.volume = 0.3; 
+
+        function playSfx(id) {
+            const sfx = document.getElementById(id);
+            if(sfx) { sfx.currentTime = 0; sfx.play().catch(e => console.log(e)); }
+        }
+
+        // --- UI HELPERS ---
         function showScreen(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
         }
 
         function speak(text) {
-            // Simple Arabic TTS
             if('speechSynthesis' in window) {
                 const u = new SpeechSynthesisUtterance(text);
-                u.lang = 'ar-SA'; 
+                u.lang = 'ar-TN'; 
                 window.speechSynthesis.speak(u);
             }
         }
 
-        // ACTIONS
+        // --- ACTIONS ---
         function joinGame() {
             const name = document.getElementById('username').value.trim();
-            if(!name) return alert("اكتب اسم يهديك!");
+            if(!name) return alert("اكتب اسم!");
             myName = name;
             socket.emit('joinGame', name);
             document.getElementById('join-btn').disabled = true;
             document.getElementById('username').disabled = true;
+
+            // Start Music on interaction
+            bgMusic.play().catch(e => console.log("Click to play audio"));
         }
 
         function startGame() { socket.emit('startGame'); }
 
         function sendMessage() {
             const input = document.getElementById('msg-input');
-            if(input.value) { socket.emit('chatMessage', input.value); input.value = ''; }
+            if(input.value.trim()) { 
+                socket.emit('chatMessage', input.value); 
+                input.value = ''; 
+                input.focus();
+            }
         }
+
+        // Enter Key to Send
+        document.getElementById('msg-input').addEventListener("keypress", function(event) {
+            if (event.key === "Enter") { event.preventDefault(); sendMessage(); }
+        });
 
         function killPlayer() {
             const target = document.getElementById('kill-select').value;
-            if(target && confirm("متأكد تحب تقتل " + target + "؟")) socket.emit('killPlayer', target);
+            if(target && confirm("تقتل " + target + "؟")) socket.emit('killPlayer', target);
         }
 
         function votePlayer() {
@@ -182,12 +212,8 @@
             if(target) { socket.emit('votePlayer', target); document.getElementById('vote-ui').style.display = 'none'; }
         }
 
-        // SOCKET EVENTS
+        // --- SOCKET EVENTS ---
         socket.on('errorMsg', msg => alert(msg));
-
-        socket.on('loadingState', (isLoading) => {
-            document.getElementById('loading-screen').style.display = isLoading ? 'flex' : 'none';
-        });
 
         socket.on('updatePlayerList', (players) => {
             const list = document.getElementById('player-list');
@@ -206,37 +232,46 @@
             });
         });
 
-        socket.on('gameInit', ({ role, data }) => {
+        socket.on('gameInit', ({ role, title, story }) => {
             showScreen('game-screen');
-            const title = document.getElementById('role-title');
+            const titleEl = document.getElementById('role-title');
             const card = document.getElementById('role-card');
 
             if(role === 'killer') {
-                title.innerText = "🔪 أنت القاتل";
-                card.classList.add('role-killer');
+                isKiller = true;
+                titleEl.innerText = "🔪 أنت القاتل";
+                titleEl.style.color = "#e50914";
                 document.getElementById('killer-ui').style.display = 'block';
             } else {
-                title.innerText = "🕵️ أنت مواطن";
-                card.classList.add('role-citizen');
+                titleEl.innerText = "🕵️ أنت مواطن";
+                titleEl.style.color = "#2ecc71";
             }
-            document.getElementById('case-text').innerText = data.title + "\n" + data.story;
-            speak("بدأت اللعبة");
+            document.getElementById('case-text').innerText = title + "\n" + story;
+            speak("بدأت اللعبة. " + title);
+        });
+
+        socket.on('secretTask', task => {
+            document.getElementById('secret-box').style.display = 'block';
+            document.getElementById('secret-text').innerText = task;
         });
 
         socket.on('newChat', ({ name, msg }) => {
             const box = document.getElementById('chat-box');
             const div = document.createElement('div');
-            div.className = 'msg';
-            div.innerHTML = `<strong>${name}</strong>${msg}`;
-            if(name === myName) div.style.background = '#005c4b'; // WhatsApp Green for me
+            // Messenger Logic: My msg = Right/Blue, Others = Left/Gray
+            const isMe = name === myName;
+            div.className = `msg ${isMe ? 'me' : 'other'}`;
+            div.innerHTML = `<strong>${isMe ? 'أنا' : name}</strong>${msg}`;
             box.appendChild(div);
             box.scrollTop = box.scrollHeight;
+            if(!isMe) playSfx('sfx-msg');
         });
 
         socket.on('newClue', clue => {
             const box = document.getElementById('chat-box');
             box.innerHTML += `<div class="msg clue">💡 ${clue}</div>`;
             box.scrollTop = box.scrollHeight;
+            playSfx('sfx-msg');
             if(navigator.vibrate) navigator.vibrate(200);
         });
 
@@ -254,7 +289,44 @@
 
         socket.on('startVoting', () => {
             document.getElementById('vote-ui').style.display = 'block';
+            playSfx('sfx-vote');
             speak("وقت التصويت");
+            // Disable killing during vote
+            if(isKiller) document.getElementById('kill-btn').disabled = true;
+        });
+
+        // Cooldown UI
+        socket.on('cooldownStart', sec => {
+            const btn = document.getElementById('kill-btn');
+            const bar = document.getElementById('cooldown-fill');
+            const txt = document.getElementById('cooldown-text');
+
+            btn.disabled = true;
+            btn.style.opacity = 0.5;
+            txt.style.display = 'block';
+            txt.innerText = `Wait ${sec}s`;
+
+            // Animation
+            bar.style.transition = `width ${sec}s linear`;
+            bar.style.width = '100%';
+        });
+
+        socket.on('cooldownEnd', () => {
+            const btn = document.getElementById('kill-btn');
+            const bar = document.getElementById('cooldown-fill');
+            const txt = document.getElementById('cooldown-text');
+
+            btn.disabled = false;
+            btn.style.opacity = 1;
+            txt.style.display = 'none';
+            bar.style.transition = 'none';
+            bar.style.width = '0%';
+        });
+
+        socket.on('playerDied', ({name}) => {
+            playSfx('sfx-kill');
+            const box = document.getElementById('chat-box');
+            box.innerHTML += `<div class="msg sys" style="color:red; font-weight:bold;">☠️ ${name} مات!</div>`;
         });
 
         socket.on('youDied', () => showScreen('dead-screen'));
