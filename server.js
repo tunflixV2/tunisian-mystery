@@ -3,104 +3,129 @@ const express = require('express');
 const http = require('http');
 const { Server } = require("socket.io");
 const path = require('path');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// --- 1. Game Data (Cases) ---
-const cases = [
-    {
-        id: 1,
-        title: "جريمة في الـ Colocation 🏠",
-        story: "الضو مقصوص، لقيتو (صالح) ميت في بيت القعاد.. شكون قتلو؟",
-        clues: [
-            "📜 تقرير: الضحية مات مضروب بحاجة ثقيلة على راسو.",
-            "🕵️ شهادة: الجار سمع عياط مع الـ 10 متاع الليل.",
-            "🔦 دليل: لقينا 'شلاكة' ملطخة بالدم تحت فرشك (القاتل).",
-            "📱 ميساج: الضحية كان يسال واحد فيكم برشا فلوس."
-        ]
-    },
-    {
-        id: 2,
-        title: "سرقة القهوة ☕",
-        story: "مولى القهوة لقى الكاسة فارغة.. السارق واحد من السرفارة!",
-        clues: [
-            "🎥 كاميرا: الكاميرا تسكرت 5 دقائق قبل السرقة.",
-            "🔑 مفتاح: السارق استعمل مفتاح أصلي، ما كسرش الباب.",
-            "👣 أثر: فما طبعة سبادري (Nike) في الكوجينة.",
-            "💸 شهادة: واحد فيكم شرى iPhone جديد البارح."
-        ]
-    }
-];
+// --- CONFIGURATION ---
+const API_KEY = "AIzaSyDBDNnDyvUqdaySHOiRmeFJpfrXmSDHAJQ"; // ⚠️ YOUR KEY
+const genAI = new GoogleGenerativeAI(API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-// --- 2. Game State ---
+// --- GAME STATE ---
 let players = {};
 let gameStarted = false;
-let currentCase = null;
+let currentMystery = null;
 let currentClueIndex = 0;
-let votes = {}; 
-let killerCooldown = false;
 let clueInterval = null;
+let votes = {};
+let killerCooldown = false;
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
+
+// --- AI GENERATION FUNCTION ---
+async function generateMystery(playerList) {
+    const playerNames = playerList.map(p => p.name).join(", ");
+
+    const prompt = `
+    أنت كاتب سيناريو مبدع لألعاب الجريمة والغموض باللهجة التونسية.
+    لدينا مجموعة من اللاعبين: [${playerNames}].
+
+    المطلوب:
+    1. اختر عشوائياً واحداً من اللاعبين ليكون "القاتل".
+    2. اكتب قصة جريمة قتل غامضة قصيرة (سياق تونسي: قهوة، حومة، عرس، وتيل...).
+    3. اكتب 4 أدلة (Clues) ذكية ومتدرجة الصعوبة:
+       - الدليل 1 و 2: غامضة وموجهة للجميع.
+       - الدليل 3: يشير لصفة في القاتل (لبسة، تصرف).
+       - الدليل 4: دليل قاطع يكشف القاتل بذكاء (لكن لا تذكر اسمه صراحة).
+
+    الرد يجب أن يكون **فقط** بصيغة JSON وبدون أي كود ماركداون، بالشكل التالي:
+    {
+      "title": "عنوان مشوق للقضية",
+      "story": "ملخص القصة وماذا حدث للضحية...",
+      "killer": "اسم اللاعب القاتل (يجب أن يكون من القائمة)",
+      "clues": ["دليل 1", "دليل 2", "دليل 3", "دليل 4"]
+    }
+    `;
+
+    try {
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+
+        // Cleanup JSON string (remove markdown ```json ... ``` if present)
+        const cleanText = text.replace(/```json|```/g, "").trim();
+        return JSON.parse(cleanText);
+    } catch (error) {
+        console.error("AI Error:", error);
+        // Fallback Mystery if AI fails
+        return {
+            title: "جريمة السيرفر الطايح 💻",
+            story: "الكونيكسيون قصت، والـ API ما حبش يجاوب.. والضحية هو (مولى اللعبة).",
+            killer: playerList[Math.floor(Math.random() * playerList.length)].name,
+            clues: [
+                "دليل 1: القاتل كان يزرب يحب يبدا الطرح.",
+                "دليل 2: فما واحد قاعد يضحك تو.",
+                "دليل 3: القاتل هو اللي يكتب بالغالط.",
+                "دليل 4: القاتل هو (القاتل)."
+            ]
+        };
+    }
+}
 
 io.on('connection', (socket) => {
 
   // -- Join --
   socket.on('joinGame', (name) => {
     if (gameStarted) {
-      socket.emit('errorMsg', 'اللعبة بدات سايي! استنى الطرح الجاي.');
+      socket.emit('errorMsg', 'اللعبة بدات! استنى الطرح الجاي.');
       return;
     }
     players[socket.id] = { id: socket.id, name: name, role: 'citizen', isDead: false, hasVoted: false };
     io.emit('updatePlayerList', Object.values(players));
   });
 
-  // -- Start Game --
-  socket.on('startGame', (caseId) => {
-    const playerIds = Object.keys(players);
-    // Modified for testing: Allow 2 players
-    if (playerIds.length < 2) {
-        io.emit('errorMsg', 'لازم على الأقل 2 ملاعبية باش تبداو!');
+  // -- Start Game (AI Version) --
+  socket.on('startGame', async () => {
+    const playerValues = Object.values(players);
+    if (playerValues.length < 2) {
+        io.emit('errorMsg', 'لازم على الأقل 2 ملاعبية!');
         return;
     }
 
-    // Reset Game
+    io.emit('systemMessage', "🤖 **قاعد نصنع في قضية جديدة بالذكاء الاصطناعي... لحظة بربي!** ⏳");
     gameStarted = true;
+
+    // 1. Generate Mystery
+    currentMystery = await generateMystery(playerValues);
+
+    // 2. Setup Game State
     currentClueIndex = 0;
     votes = {};
     killerCooldown = false;
     clearInterval(clueInterval);
 
-    playerIds.forEach(id => {
-        players[id].isDead = false;
-        players[id].hasVoted = false;
+    playerValues.forEach(p => {
+        p.isDead = false;
+        p.hasVoted = false;
+        // Assign Roles based on AI selection
+        if (p.name === currentMystery.killer) {
+            p.role = 'killer';
+            io.to(p.id).emit('gameInit', { role: 'killer', caseTitle: currentMystery.title, story: currentMystery.story });
+        } else {
+            p.role = 'citizen';
+            io.to(p.id).emit('gameInit', { role: 'citizen', caseTitle: currentMystery.title, story: currentMystery.story });
+        }
     });
 
-    // Setup Case
-    currentCase = cases.find(c => c.id == caseId) || cases[0];
+    // Broadcast Story
+    io.emit('systemMessage', `🚨 **${currentMystery.title}** 🚨\n${currentMystery.story}`);
 
-    // Assign Killer
-    const killerIndex = Math.floor(Math.random() * playerIds.length);
-    const killerId = playerIds[killerIndex];
-
-    playerIds.forEach(id => {
-      const p = players[id];
-      if (id === killerId) {
-        p.role = 'killer';
-        io.to(id).emit('gameInit', { role: 'killer', caseTitle: currentCase.title, story: currentCase.story });
-      } else {
-        p.role = 'citizen';
-        io.to(id).emit('gameInit', { role: 'citizen', caseTitle: currentCase.title, story: currentCase.story });
-      }
-    });
-
-    io.emit('systemMessage', `🚨 **${currentCase.title}** 🚨\n${currentCase.story}`);
-
-    // Start Clues
+    // 3. Start Clues Loop
     startClueLoop();
   });
 
@@ -108,23 +133,18 @@ io.on('connection', (socket) => {
       if (clueInterval) clearInterval(clueInterval);
 
       clueInterval = setInterval(() => {
-          if (!gameStarted || !currentCase) return;
+          if (!gameStarted || !currentMystery) return;
 
-          if (currentClueIndex < currentCase.clues.length) {
-              let clue = currentCase.clues[currentClueIndex];
-              // Smart Clue Replacement
-              if (clue.includes("(القاتل)")) {
-                  const killer = Object.values(players).find(p => p.role === 'killer');
-                  clue = clue.replace("(القاتل)", killer ? killer.name : "مجهول");
-              }
+          if (currentClueIndex < currentMystery.clues.length) {
+              let clue = currentMystery.clues[currentClueIndex];
               io.emit('newClue', clue);
               currentClueIndex++;
           } else {
               clearInterval(clueInterval);
               io.emit('systemMessage', "⛔ وفات الأدلة! تو وقت التصويت.. شكون القاتل؟");
-              io.emit('startVoting'); // Auto-trigger vote at end of clues
+              io.emit('startVoting');
           }
-      }, 30000); // 30s per clue
+      }, 45000); // 45s per clue (AI clues are longer/better)
   }
 
   // -- Chat --
@@ -135,42 +155,36 @@ io.on('connection', (socket) => {
     }
   });
 
-  // -- Kill Logic (The Core Fix) --
+  // -- Kill Logic --
   socket.on('killPlayer', (targetName) => {
     const killer = players[socket.id];
-
-    // 1. Validation
     if (!killer || killer.role !== 'killer' || killer.isDead) return;
+
     if (killerCooldown) {
-        socket.emit('errorMsg', '⏳ اصبر شوية! السلاح سخون (Cooldown).');
+        socket.emit('errorMsg', '⏳ اصبر شوية! Cooldown.');
         return;
     }
 
     const targetId = Object.keys(players).find(key => players[key].name === targetName);
     if (targetId && !players[targetId].isDead) {
-
-        // 2. Execute Kill
         players[targetId].isDead = true;
-        io.emit('playerDied', { name: targetName }); // Announce death
-        io.to(targetId).emit('youDied'); // Show dead screen
+        io.emit('playerDied', { name: targetName });
+        io.to(targetId).emit('youDied');
 
-        // 3. Trigger Emergency Meeting (Vote)
-        io.emit('systemMessage', `🚨 **جثة!** لقينا ${targetName} مقتول! التصويت تحل.`);
+        io.emit('systemMessage', `🚨 **جثة!** ${targetName} مات مقتول! التصويت تحل.`);
         io.emit('startVoting');
 
-        // 4. Set Cooldown
         killerCooldown = true;
-        socket.emit('cooldownStart', 30); // 30s timer for client UI
+        socket.emit('cooldownStart', 30);
         setTimeout(() => {
             killerCooldown = false;
             socket.emit('cooldownEnd');
         }, 30000);
 
-        // 5. Win Condition (Killer Wins if 1v1)
+        // Win Condition
         const alive = Object.values(players).filter(p => !p.isDead).length;
-        if (alive <= 1) { // If only killer is left (or +1 victim in 2 player mode, instant win)
-             // In 2 player mode, if you kill the other, you win instantly.
-             io.emit('gameOver', { winner: 'killer', msg: `🔪 القاتل (${killer.name}) ربح! صفيتهم الكل.` });
+        if (alive <= 1) {
+             io.emit('gameOver', { winner: 'killer', msg: `🔪 القاتل (${killer.name}) ربح! ذكي برشا.` });
              gameStarted = false;
              clearInterval(clueInterval);
         }
@@ -191,17 +205,11 @@ io.on('connection', (socket) => {
           const aliveCount = Object.values(players).filter(p => !p.isDead).length;
           const votesCount = Object.values(players).filter(p => p.hasVoted).length;
 
-          // If everyone voted
           if (votesCount >= aliveCount) {
               let maxVotes = 0;
               let electedId = null;
-
-              // Find who got most votes
               for (const [pid, count] of Object.entries(votes)) {
-                  if (count > maxVotes) {
-                      maxVotes = count;
-                      electedId = pid;
-                  }
+                  if (count > maxVotes) { maxVotes = count; electedId = pid; }
               }
 
               if (electedId) {
@@ -216,12 +224,11 @@ io.on('connection', (socket) => {
                       clearInterval(clueInterval);
                   } else {
                       io.emit('systemMessage', `😱 يا ناري.. ${elected.name} كان بريء! القاتل مازال يدور.`);
-                      // Continue game...
                       votes = {};
                       Object.values(players).forEach(p => p.hasVoted = false);
                   }
               } else {
-                  io.emit('systemMessage', "⚖️ تعادل في الأصوات! ما مات حد.");
+                  io.emit('systemMessage', "⚖️ تعادل! ما مات حد.");
                   votes = {};
                   Object.values(players).forEach(p => p.hasVoted = false);
               }
@@ -232,7 +239,6 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     delete players[socket.id];
     io.emit('updatePlayerList', Object.values(players));
-    // If fewer than 2 players left, end game
     if (gameStarted && Object.keys(players).length < 2) {
         io.emit('gameOver', { winner: 'draw', msg: "⛔ اللعبة وفات خاطر فما شكون خرج." });
         gameStarted = false;
