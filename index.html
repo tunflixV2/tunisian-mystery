@@ -41,7 +41,11 @@
 
         .msg strong { display: block; font-size: 0.75em; opacity: 0.8; margin-bottom: 2px; }
 
-        .msg.clue { align-self: center; background: #d35400; color: white; border-radius: 12px; width: 90%; text-align: center; border: 1px solid #e67e22; animation: popIn 0.5s; }
+        /* IMAGE CLUES */
+        .msg.clue { align-self: center; background: #d35400; color: white; border-radius: 12px; width: 90%; text-align: center; border: 1px solid #e67e22; animation: popIn 0.5s; padding: 0; overflow: hidden; }
+        .clue-img { width: 100%; height: 150px; object-fit: cover; border-bottom: 1px solid #e67e22; }
+        .clue-text { padding: 10px; font-weight: bold; }
+
         .msg.rumor { align-self: center; background: #8e44ad; color: white; border-radius: 12px; width: 90%; text-align: center; font-style: italic; border: 1px solid #9b59b6; }
         .msg.sys { align-self: center; background: transparent; color: #888; font-size: 0.8em; width: 100%; text-align: center; margin: 10px 0; border: none; }
 
@@ -53,8 +57,6 @@
 
         /* KILLER UI */
         #killer-ui { display:none; background: #2c0b0e; padding: 10px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #e50914; }
-        .cooldown-bar { height: 4px; background: #555; width: 100%; margin-top: 5px; border-radius: 2px; overflow: hidden; }
-        .cooldown-fill { height: 100%; background: #e50914; width: 0%; transition: width 1s linear; }
 
         /* ANIMATIONS */
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
@@ -115,8 +117,6 @@
                     <select id="kill-select" style="margin:0;"><option>الضحية...</option></select>
                     <button id="kill-btn" onclick="killPlayer()" style="width: 40%; margin:0; font-size: 1em;">🔪 تصفية</button>
                 </div>
-                <div class="cooldown-bar"><div id="cooldown-fill" class="cooldown-fill"></div></div>
-                <p id="cooldown-text" style="color: #e50914; font-size: 0.8em; text-align: center; margin: 5px 0 0 0; display: none;">Wait...</p>
             </div>
 
             <!-- Vote Actions -->
@@ -267,9 +267,19 @@
             if(!isMe) playSfx('sfx-msg');
         });
 
-        socket.on('newClue', clue => {
+        socket.on('newClue', clueObj => {
             const box = document.getElementById('chat-box');
-            box.innerHTML += `<div class="msg clue">💡 ${clue}</div>`;
+            // Create Image + Text block
+            let imgHTML = '';
+            if(clueObj.img) {
+                imgHTML = `<img src="${clueObj.img}" class="clue-img">`;
+            }
+
+            const div = document.createElement('div');
+            div.className = 'msg clue';
+            div.innerHTML = `${imgHTML}<div class="clue-text">💡 ${clueObj.text}</div>`;
+
+            box.appendChild(div);
             box.scrollTop = box.scrollHeight;
             playSfx('sfx-msg');
             if(navigator.vibrate) navigator.vibrate(200);
@@ -293,34 +303,6 @@
             speak("وقت التصويت");
             // Disable killing during vote
             if(isKiller) document.getElementById('kill-btn').disabled = true;
-        });
-
-        // Cooldown UI
-        socket.on('cooldownStart', sec => {
-            const btn = document.getElementById('kill-btn');
-            const bar = document.getElementById('cooldown-fill');
-            const txt = document.getElementById('cooldown-text');
-
-            btn.disabled = true;
-            btn.style.opacity = 0.5;
-            txt.style.display = 'block';
-            txt.innerText = `Wait ${sec}s`;
-
-            // Animation
-            bar.style.transition = `width ${sec}s linear`;
-            bar.style.width = '100%';
-        });
-
-        socket.on('cooldownEnd', () => {
-            const btn = document.getElementById('kill-btn');
-            const bar = document.getElementById('cooldown-fill');
-            const txt = document.getElementById('cooldown-text');
-
-            btn.disabled = false;
-            btn.style.opacity = 1;
-            txt.style.display = 'none';
-            bar.style.transition = 'none';
-            bar.style.width = '0%';
         });
 
         socket.on('playerDied', ({name}) => {
