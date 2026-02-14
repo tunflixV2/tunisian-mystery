@@ -1,51 +1,96 @@
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tunisian Mystery Game</title>
+    <title>تحقيق تونسي 🇹🇳</title>
     <style>
-        body { font-family: sans-serif; background-color: #121212; color: white; text-align: center; }
-        #game-screen, #lobby-screen, #dead-screen { display: none; }
-        .active { display: block !important; }
-        input, button { padding: 10px; margin: 5px; border-radius: 5px; }
-        button { cursor: pointer; background-color: #e74c3c; color: white; border: none; }
-        #chat-box { height: 200px; overflow-y: scroll; border: 1px solid #333; margin-bottom: 10px; text-align: left; padding: 5px; }
-        .role-display { font-size: 1.5em; font-weight: bold; margin: 20px; color: #f1c40f; }
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
+
+        body { font-family: 'Cairo', sans-serif; background-color: #1a1a1a; color: #eee; text-align: center; margin: 0; padding: 0; }
+        .screen { display: none; padding: 20px; height: 100vh; box-sizing: border-box; }
+        .active { display: flex !important; flex-direction: column; align-items: center; }
+
+        h1, h2, h3 { color: #e74c3c; margin-bottom: 10px; }
+        input, select { padding: 12px; margin: 10px; border-radius: 8px; border: none; width: 80%; font-size: 16px; text-align: center; }
+        button { padding: 12px 24px; margin: 10px; border-radius: 8px; cursor: pointer; border: none; font-size: 16px; font-weight: bold; width: 80%; transition: 0.2s; }
+        .btn-primary { background-color: #e74c3c; color: white; }
+        .btn-secondary { background-color: #3498db; color: white; }
+
+        #chat-box { flex-grow: 1; width: 100%; overflow-y: scroll; background: #2c2c2c; border-radius: 10px; padding: 10px; margin-bottom: 10px; text-align: right; }
+        .message { margin-bottom: 8px; padding: 8px; border-radius: 5px; background: #444; }
+        .clue-msg { background: #f39c12; color: #000; font-weight: bold; animation: pop 0.5s; }
+        .sys-msg { background: #8e44ad; color: white; text-align: center; font-style: italic; }
+
+        .role-card { background: #333; padding: 15px; border-radius: 10px; margin-bottom: 10px; width: 90%; border: 2px solid #555; }
+        .killer-role { border-color: red; color: red; }
+        .citizen-role { border-color: green; color: green; }
+
+        @keyframes pop { 0% { transform: scale(0.8); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body>
 
     <!-- LOBBY -->
-    <div id="lobby-screen" class="active">
-        <h1>🕵️ Tunisian Mystery 🇹🇳</h1>
-        <input type="text" id="username" placeholder="Enter your name..." />
-        <button onclick="joinGame()">Join Game</button>
-        <h3>Players Waiting:</h3>
-        <ul id="player-list"></ul>
-        <button onclick="startGame()" style="background-color: #2ecc71;">START GAME</button>
+    <div id="lobby-screen" class="screen active">
+        <h1>🕵️ تحقيق تونسي 🇹🇳</h1>
+        <p>اكتب اسمك واستنى الشلة تتلم</p>
+        <input type="text" id="username" placeholder="اسمك يا معلم..." />
+        <button class="btn-primary" onclick="joinGame()">دخول</button>
+
+        <div style="width: 100%; margin-top: 20px;">
+            <h3>شكون حاضر:</h3>
+            <ul id="player-list" style="list-style: none; padding: 0;"></ul>
+        </div>
+
+        <div id="admin-controls" style="margin-top: auto; width: 100%;">
+            <label>اختار القضية:</label>
+            <select id="case-select">
+                <option value="1">جريمة في الـ Colocation 🏠</option>
+                <option value="2">سرقة القهوة ☕</option>
+            </select>
+            <button class="btn-secondary" onclick="startGame()">🚀 ابدا اللعب</button>
+        </div>
     </div>
 
     <!-- GAMEPLAY -->
-    <div id="game-screen">
-        <div id="role-msg" class="role-display"></div>
-        <div id="chat-box"></div>
-        <input type="text" id="msg-input" placeholder="Type a message..." />
-        <button onclick="sendMessage()">Send</button>
+    <div id="game-screen" class="screen">
+        <div id="role-display" class="role-card">
+            <h2 id="role-title">...</h2>
+            <p id="case-story" style="color: #ccc; font-size: 0.9em;">...</p>
+        </div>
 
-        <!-- Killer Controls (Only visible to killer via JS logic) -->
-        <div id="killer-controls" style="display:none; margin-top:20px; border-top: 1px solid #555;">
-            <h3>🔪 KILL SOMEONE 🔪</h3>
-            <input type="text" id="target-name" placeholder="Name of victim..." />
-            <button onclick="killPlayer()">ELIMINATE</button>
+        <div id="chat-box"></div>
+
+        <div style="display: flex; width: 100%;">
+            <input type="text" id="msg-input" placeholder="اكتب حاجة..." style="width: 70%;" />
+            <button onclick="sendMessage()" class="btn-primary" style="width: 25%;">ابعث</button>
+        </div>
+
+        <!-- Action Buttons -->
+        <div id="killer-controls" style="display:none; width: 100%; margin-top: 10px;">
+            <input type="text" id="target-name" placeholder="اسم الضحية..." />
+            <button class="btn-primary" style="background: darkred;" onclick="killPlayer()">🔪 اقتل</button>
+        </div>
+
+        <div id="vote-controls" style="display:none; width: 100%; margin-top: 10px; background: #2980b9; padding: 10px; border-radius: 8px;">
+            <h3>🗳️ وقت التصويت!</h3>
+            <input type="text" id="vote-target" placeholder="اسم المشتبه فيه..." />
+            <button class="btn-secondary" onclick="votePlayer()">صوّت عليه</button>
         </div>
     </div>
 
     <!-- DEAD SCREEN -->
-    <div id="dead-screen">
-        <h1 style="color: red;">YOU ARE DEAD 💀</h1>
-        <p>Wait for the game to end...</p>
+    <div id="dead-screen" class="screen" style="justify-content: center; background: darkred;">
+        <h1 style="font-size: 3em;">💀 متّ!</h1>
+        <p>يا خسارة.. استنى الطرح يوفى.</p>
+    </div>
+
+    <!-- WIN SCREEN -->
+    <div id="win-screen" class="screen" style="justify-content: center;">
+        <h1 id="win-msg"></h1>
+        <button class="btn-primary" onclick="location.reload()">طرح جديد</button>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
@@ -58,59 +103,108 @@
             if(name) {
                 socket.emit('joinGame', name);
                 document.getElementById('username').disabled = true;
+            } else {
+                alert("اكتب اسمك يهديك!");
             }
         }
 
         function startGame() {
-            socket.emit('startGame');
+            const caseId = document.getElementById('case-select').value;
+            socket.emit('startGame', caseId);
         }
 
         function sendMessage() {
             const msg = document.getElementById('msg-input').value;
-            socket.emit('chatMessage', msg);
-            document.getElementById('msg-input').value = '';
+            if(msg) {
+                socket.emit('chatMessage', msg);
+                document.getElementById('msg-input').value = '';
+            }
         }
 
         function killPlayer() {
             const target = document.getElementById('target-name').value;
-            socket.emit('killPlayer', target);
+            if(confirm("متأكد تحب تقتل " + target + "؟")) {
+                socket.emit('killPlayer', target);
+            }
         }
 
-        // Socket Events
+        function votePlayer() {
+            const target = document.getElementById('vote-target').value;
+            if(target) {
+                socket.emit('votePlayer', target);
+                document.getElementById('vote-controls').style.display = 'none'; // Hide after vote
+            }
+        }
+
+        // --- Socket Events ---
+
         socket.on('updatePlayerList', (players) => {
             const list = document.getElementById('player-list');
-            list.innerHTML = players.map(p => `<li>${p.name}</li>`).join('');
+            list.innerHTML = players.map(p => `<li style="padding: 5px; border-bottom: 1px solid #444;">👤 ${p.name}</li>`).join('');
         });
 
         socket.on('errorMsg', (msg) => alert(msg));
 
-        socket.on('gameStarted', () => {
+        socket.on('gameInit', (data) => {
             document.getElementById('lobby-screen').classList.remove('active');
             document.getElementById('game-screen').classList.add('active');
-        });
 
-        socket.on('roleAssigned', (data) => {
             myRole = data.role;
-            document.getElementById('role-msg').innerText = data.message;
+            const roleTitle = document.getElementById('role-title');
+            const roleCard = document.getElementById('role-display');
+
             if (myRole === 'killer') {
+                roleTitle.innerText = "🔪 أنت القاتل!";
+                roleCard.classList.add('killer-role');
                 document.getElementById('killer-controls').style.display = 'block';
+            } else {
+                roleTitle.innerText = "🕵️ أنت مواطن بريء";
+                roleCard.classList.add('citizen-role');
             }
+            document.getElementById('case-story').innerText = data.caseTitle + "\n" + data.story;
         });
 
         socket.on('newChat', (data) => {
             const box = document.getElementById('chat-box');
-            box.innerHTML += `<div><strong>${data.name}:</strong> ${data.msg}</div>`;
+            box.innerHTML += `<div class="message"><strong>${data.name}:</strong> ${data.msg}</div>`;
             box.scrollTop = box.scrollHeight;
+        });
+
+        socket.on('newClue', (clue) => {
+            const box = document.getElementById('chat-box');
+            box.innerHTML += `<div class="message clue-msg">💡 دليل جديد: ${clue}</div>`;
+            box.scrollTop = box.scrollHeight;
+            // Vibrate phone if supported
+            if(navigator.vibrate) navigator.vibrate(200);
+        });
+
+        socket.on('systemMessage', (msg) => {
+            const box = document.getElementById('chat-box');
+            // Convert markdown-like **bold** to HTML
+            const formattedMsg = msg.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+            box.innerHTML += `<div class="message sys-msg">${formattedMsg}</div>`;
+            box.scrollTop = box.scrollHeight;
+        });
+
+        socket.on('startVoting', () => {
+            document.getElementById('vote-controls').style.display = 'block';
         });
 
         socket.on('playerDied', (data) => {
             const box = document.getElementById('chat-box');
-            box.innerHTML += `<div style="color:red; font-weight:bold;">☠️ ${data.name} HAS BEEN KILLED! ☠️</div>`;
+            box.innerHTML += `<div class="message" style="background: darkred; color: white;">☠️ <strong>${data.name}</strong> مات!</div>`;
         });
 
         socket.on('youDied', () => {
             document.getElementById('game-screen').classList.remove('active');
             document.getElementById('dead-screen').classList.add('active');
+        });
+
+        socket.on('gameOver', (data) => {
+            document.getElementById('game-screen').classList.remove('active');
+            document.getElementById('dead-screen').classList.remove('active');
+            document.getElementById('win-screen').classList.add('active');
+            document.getElementById('win-msg').innerText = data.msg;
         });
     </script>
 </body>
