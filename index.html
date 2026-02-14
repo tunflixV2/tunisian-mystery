@@ -1,0 +1,117 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tunisian Mystery Game</title>
+    <style>
+        body { font-family: sans-serif; background-color: #121212; color: white; text-align: center; }
+        #game-screen, #lobby-screen, #dead-screen { display: none; }
+        .active { display: block !important; }
+        input, button { padding: 10px; margin: 5px; border-radius: 5px; }
+        button { cursor: pointer; background-color: #e74c3c; color: white; border: none; }
+        #chat-box { height: 200px; overflow-y: scroll; border: 1px solid #333; margin-bottom: 10px; text-align: left; padding: 5px; }
+        .role-display { font-size: 1.5em; font-weight: bold; margin: 20px; color: #f1c40f; }
+    </style>
+</head>
+<body>
+
+    <!-- LOBBY -->
+    <div id="lobby-screen" class="active">
+        <h1>🕵️ Tunisian Mystery 🇹🇳</h1>
+        <input type="text" id="username" placeholder="Enter your name..." />
+        <button onclick="joinGame()">Join Game</button>
+        <h3>Players Waiting:</h3>
+        <ul id="player-list"></ul>
+        <button onclick="startGame()" style="background-color: #2ecc71;">START GAME</button>
+    </div>
+
+    <!-- GAMEPLAY -->
+    <div id="game-screen">
+        <div id="role-msg" class="role-display"></div>
+        <div id="chat-box"></div>
+        <input type="text" id="msg-input" placeholder="Type a message..." />
+        <button onclick="sendMessage()">Send</button>
+
+        <!-- Killer Controls (Only visible to killer via JS logic) -->
+        <div id="killer-controls" style="display:none; margin-top:20px; border-top: 1px solid #555;">
+            <h3>🔪 KILL SOMEONE 🔪</h3>
+            <input type="text" id="target-name" placeholder="Name of victim..." />
+            <button onclick="killPlayer()">ELIMINATE</button>
+        </div>
+    </div>
+
+    <!-- DEAD SCREEN -->
+    <div id="dead-screen">
+        <h1 style="color: red;">YOU ARE DEAD 💀</h1>
+        <p>Wait for the game to end...</p>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let myRole = '';
+
+        function joinGame() {
+            const name = document.getElementById('username').value;
+            if(name) {
+                socket.emit('joinGame', name);
+                document.getElementById('username').disabled = true;
+            }
+        }
+
+        function startGame() {
+            socket.emit('startGame');
+        }
+
+        function sendMessage() {
+            const msg = document.getElementById('msg-input').value;
+            socket.emit('chatMessage', msg);
+            document.getElementById('msg-input').value = '';
+        }
+
+        function killPlayer() {
+            const target = document.getElementById('target-name').value;
+            socket.emit('killPlayer', target);
+        }
+
+        // Socket Events
+        socket.on('updatePlayerList', (players) => {
+            const list = document.getElementById('player-list');
+            list.innerHTML = players.map(p => `<li>${p.name}</li>`).join('');
+        });
+
+        socket.on('errorMsg', (msg) => alert(msg));
+
+        socket.on('gameStarted', () => {
+            document.getElementById('lobby-screen').classList.remove('active');
+            document.getElementById('game-screen').classList.add('active');
+        });
+
+        socket.on('roleAssigned', (data) => {
+            myRole = data.role;
+            document.getElementById('role-msg').innerText = data.message;
+            if (myRole === 'killer') {
+                document.getElementById('killer-controls').style.display = 'block';
+            }
+        });
+
+        socket.on('newChat', (data) => {
+            const box = document.getElementById('chat-box');
+            box.innerHTML += `<div><strong>${data.name}:</strong> ${data.msg}</div>`;
+            box.scrollTop = box.scrollHeight;
+        });
+
+        socket.on('playerDied', (data) => {
+            const box = document.getElementById('chat-box');
+            box.innerHTML += `<div style="color:red; font-weight:bold;">☠️ ${data.name} HAS BEEN KILLED! ☠️</div>`;
+        });
+
+        socket.on('youDied', () => {
+            document.getElementById('game-screen').classList.remove('active');
+            document.getElementById('dead-screen').classList.add('active');
+        });
+    </script>
+</body>
+</html>
