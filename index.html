@@ -47,7 +47,7 @@
             <ul id="player-list" style="list-style: none; padding: 0;"></ul>
         </div>
 
-        <button class="btn-primary" style="background: #27ae60; margin-top: auto;" onclick="startGame()">🚀 ابدا الرعب (2+)</button>
+        <button class="btn-primary" style="background: #27ae60; margin-top: auto;" onclick="startGame()">🚀 ابدا الرعب</button>
     </div>
 
     <!-- GAMEPLAY -->
@@ -90,7 +90,8 @@
         <button class="btn-primary" onclick="location.reload()">🔄 Replay</button>
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
+    <!-- FIXED SOCKET.IO CDN -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
         const socket = io();
         let myRole = '';

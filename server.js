@@ -7,10 +7,12 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+    cors: { origin: "*" } // Fix CORS issues
+});
 
 // --- CONFIGURATION ---
-const API_KEY = "AIzaSyDBDNnDyvUqdaySHOiRmeFJpfrXmSDHAJQ"; // ⚠️ YOUR KEY
+const API_KEY = "AIzaSyDBDNnDyvUqdaySHOiRmeFJpfrXmSDHAJQ"; // YOUR KEY
 const genAI = new GoogleGenerativeAI(API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
@@ -28,9 +30,19 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// --- AI GENERATION ---
+// --- AI LOGIC ---
 async function generateMystery(playerList) {
     const playerNames = playerList.map(p => p.name).join(", ");
+
+    // Fallback if AI fails or key is invalid
+    const fallback = {
+        title: "جريمة السيرفر الطايح 💻",
+        story: "الكونيكسيون قصت، والـ API ما حبش يجاوب.. والضحية هو (مولى اللعبة).",
+        killer: playerList[0].name,
+        clues: ["القاتل هو الأول في الليسة", "القاتل لابس مريول", "القاتل يضحك تو", "القاتل هو (القاتل)"],
+        rumors: ["سمعت (فلان) يحكي في التليفون بالسرقة", "فما واحد فيكم يصور فيكم"],
+        secrets: []
+    };
 
     const prompt = `
     أنت مخرج أفلام رعب نفسي تونسي.
@@ -39,8 +51,8 @@ async function generateMystery(playerList) {
     1. اختر "القاتل" عشوائياً.
     2. اكتب قصة جريمة غامضة ومشوقة باللهجة التونسية.
     3. اكتب 4 أدلة (Clues) ذكية ومتدرجة (بعضها مضلل).
-    4. اكتب 3 "إشاعات" (Rumors) خبيثة تفرق بين الأصدقاء (مثلاً: "فلان شفتو يفسخ في ميساجات"، "فلان يخبّي في حاجة").
-    5. اكتب "مهام سرية" (Secret Objectives) لـ 2 لاعبين أبرياء تجعلهم يتصرفون بريبة (مثلاً: "دافع عن القاتل"، "اتهم فلان زوراً").
+    4. اكتب 3 "إشاعات" (Rumors) خبيثة تفرق بين الأصدقاء.
+    5. اكتب "مهام سرية" (Secret Objectives) لـ 2 لاعبين أبرياء.
 
     الرد JSON فقط:
     {
@@ -63,18 +75,12 @@ async function generateMystery(playerList) {
         return JSON.parse(text);
     } catch (error) {
         console.error("AI Error:", error);
-        return {
-            title: "جريمة السيرفر 💻",
-            story: "الذكاء الاصطناعي عمل إضراب.. والقاتل استغل الفرصة.",
-            killer: playerList[0].name,
-            clues: ["القاتل هو الأول في الليسة", "القاتل لابس مريول", "القاتل يضحك تو", "القاتل هو (القاتل)"],
-            rumors: ["سمعت (فلان) يحكي في التليفون بالسرقة", "فما واحد فيكم يصور فيكم"],
-            secrets: []
-        };
+        return fallback;
     }
 }
 
 io.on('connection', (socket) => {
+  console.log('User connected:', socket.id);
 
   socket.on('joinGame', (name) => {
     if (gameStarted) return socket.emit('errorMsg', 'اللعبة بدات!');
@@ -84,7 +90,8 @@ io.on('connection', (socket) => {
 
   socket.on('startGame', async () => {
     const playerValues = Object.values(players);
-    if (playerValues.length < 2) return io.emit('errorMsg', 'لازم 2+ ملاعبية!');
+    // Allow 1 player for testing (change to 2 for real game)
+    if (playerValues.length < 1) return io.emit('errorMsg', 'لازم ملاعبية!');
 
     io.emit('systemMessage', "🤖 **قاعد نخطط في مؤامرة... استناو شوية!** 😈");
     gameStarted = true;
@@ -103,7 +110,6 @@ io.on('connection', (socket) => {
         p.isDead = false;
         p.hasVoted = false;
 
-        // Assign Role
         if (p.name === currentMystery.killer) {
             p.role = 'killer';
             io.to(p.id).emit('gameInit', { role: 'killer', caseTitle: currentMystery.title, story: currentMystery.story });
@@ -112,12 +118,11 @@ io.on('connection', (socket) => {
             io.to(p.id).emit('gameInit', { role: 'citizen', caseTitle: currentMystery.title, story: currentMystery.story });
         }
 
-        // Assign Secret Tasks (Side Quests)
         if (currentMystery.secrets) {
             const secretObj = currentMystery.secrets.find(s => s.player === p.name);
             if (secretObj && p.role !== 'killer') {
                 p.secret = secretObj.task;
-                io.to(p.id).emit('secretTask', secretObj.task); // Send private secret
+                io.to(p.id).emit('secretTask', secretObj.task);
             }
         }
     });
@@ -126,7 +131,7 @@ io.on('connection', (socket) => {
 
     // 3. Loops
     startClueLoop();
-    startRumorLoop(); // New loop for chaos
+    startRumorLoop();
   });
 
   function startClueLoop() {
@@ -136,7 +141,6 @@ io.on('connection', (socket) => {
           if (currentClueIndex < currentMystery.clues.length) {
               let clue = currentMystery.clues[currentClueIndex];
               io.emit('newClue', clue);
-              // Trigger TTS on client side for clues
               io.emit('playAudio', clue); 
               currentClueIndex++;
           } else {
@@ -145,7 +149,7 @@ io.on('connection', (socket) => {
               io.emit('systemMessage', "⛔ وفات الأدلة! شكون القاتل؟");
               io.emit('startVoting');
           }
-      }, 40000); 
+      }, 30000); // 30s per clue
   }
 
   function startRumorLoop() {
@@ -153,15 +157,13 @@ io.on('connection', (socket) => {
       rumorInterval = setInterval(() => {
           if (!gameStarted || !currentMystery || !currentMystery.rumors) return;
 
-          // Pick random rumor & random target player
           const rumor = currentMystery.rumors[Math.floor(Math.random() * currentMystery.rumors.length)];
           const playerIds = Object.keys(players);
           const randomTarget = playerIds[Math.floor(Math.random() * playerIds.length)];
 
-          // Send PRIVATE rumor to ONE player only
           io.to(randomTarget).emit('privateRumor', rumor);
 
-      }, 25000); // Rumors every 25s
+      }, 20000); // Rumors every 20s
   }
 
   socket.on('chatMessage', (msg) => {
@@ -180,7 +182,7 @@ io.on('connection', (socket) => {
         io.to(targetId).emit('youDied');
 
         io.emit('systemMessage', `🚨 **جثة!** ${targetName} مات!`);
-        io.emit('playAudio', `عاجل! ${targetName} مات مقتول!`); // Audio alert
+        io.emit('playAudio', `عاجل! ${targetName} مات مقتول!`);
         io.emit('startVoting');
 
         killerCooldown = true;
