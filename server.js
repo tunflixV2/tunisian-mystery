@@ -8,57 +8,105 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
-// --- IMAGES ---
+// --- SMART IMAGES ---
 const images = {
     weapon: {
-        "سكينة": "https://images.unsplash.com/photo-1588506066223-1d54b4c7344e?w=400&q=80",
-        "شلاكة": "https://images.unsplash.com/photo-1606821295326-646df4f2537c?w=400&q=80", 
-        "سم": "https://images.unsplash.com/photo-1598202521921-93c41793709b?w=400&q=80",
-        "مسدس": "https://images.unsplash.com/photo-1595590424283-b8f17842773f?w=400&q=80",
+        "مزهرية": "https://images.unsplash.com/photo-1585803277271-e5d0d8291079?w=400&q=80", 
+        "سم": "https://images.unsplash.com/photo-1628731309855-66795d666633?w=400&q=80", 
         "حبل": "https://images.unsplash.com/photo-1599408169542-620fc137e6da?w=400&q=80",
-        "مقص": "https://images.unsplash.com/photo-1596499878201-9a7213876e78?w=400&q=80"
+        "كيك": "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&q=80", 
+        "frein": "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=400&q=80",
+        "سكينة": "https://images.unsplash.com/photo-1588506066223-1d54b4c7344e?w=400&q=80"
     },
     location: {
-        "قهوة": "https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=400&q=80",
-        "دار": "https://images.unsplash.com/photo-1565512217032-9013c7a6e190?w=400&q=80",
-        "شارع": "https://images.unsplash.com/photo-1506159263177-336c1e19484b?w=400&q=80",
-        "يخت": "https://images.unsplash.com/photo-1569263979104-865ab7dd8d17?w=400&q=80",
         "عرس": "https://images.unsplash.com/photo-1519741497674-611481863552?w=400&q=80",
-        "فيلا": "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&q=80"
+        "فيلا": "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&q=80",
+        "غابة": "https://images.unsplash.com/photo-1448375240586-dfd8d395ea6c?w=400&q=80",
+        "مكتب": "https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&q=80"
     },
-    generic: "https://images.unsplash.com/photo-1579208575657-c595a05383b7?w=400&q=80" 
+    generic: "https://images.unsplash.com/photo-1579208575657-c595a05383b7?w=400&q=80"
 };
 
-// --- MYSTERIES (Sample of previous DB for brevity, logic applies to all) ---
-// Keeping the same structure but changing logic below.
+// --- MYSTERIES (Same 6 Cases) ---
 const mysteriesDB = [
     {
-        title: "ليلة الدم في عرس سوسة",
-        story: "العريس يختفي قبل تقطيع الكيك. تلقاوه في غرفة التبديل مطعون. القاعة مسكّرة.",
-        killerDesc: "اللي لابس بدلة زرقاء وعندو ساعة ذهب كبيرة",
+        title: "السهرة اللي تبدلت لمأتم",
+        story: "سهرة في قمرت. الضحية طلع للطابق الثاني وما رجعش. تلقاوه مضروب بمزهرية، والدم سخون. الشباك محلول، والباب مش مكسور.",
+        killerDesc: "اللي لابس chemise سودة، وكان قاعد وحدو في البالكون",
         clues: [
-            { text: "الباب مسكّر من الداخل، ما فماش كسر.", img: images.location["عرس"] },
-            { text: "ساعة ذهب طايحة تحت الطاولة.", img: null },
-            { text: "الكاميرا تورّي بدلة زرقاء داخلة قبل 7 دقايق.", img: images.generic },
-            { text: "بصمات (القاتل) على السكينة.", img: images.weapon["سكينة"] }
+            { text: "المزهرية اللي تضرب بيها الضحية عليها بصمات (القاتل).", img: images.weapon["مزهرية"] },
+            { text: "قطرات دم صغيرة تمشي لباب البالكون.", img: images.location["فيلا"] },
+            { text: "الكاميرا صورت (القاتل) طالع قبل 6 دقايق.", img: images.generic },
+            { text: "ألياف قماش سودة تحت أظافر الضحية تطابق قماش (القاتل).", img: null }
         ],
-        rumors: ["شافو واحد يغسل يديه ومربك.", "سمعو عركة قديمة على فلوس."],
-        secret: "دافع على صاحب البدلة الزرقاء ويشكك في الكاميرا."
+        rumors: ["سمعو واحد يهدد الضحية: 'تو تندم'.", "واحد طلع للطابق الثاني وهو متوتر."],
+        secret: "دافع على صاحب الـ chemise السودة وقول الألياف قديمة."
     },
     {
-        title: "غدرة في رحلة بحرية",
-        story: "في يخت خاص، واحد يطيح في البحر بالليل. الصباح يلقاو جاكيته مقصوصة.",
-        killerDesc: "اللي عندو وشم حوت في يدو اليسار",
+        title: "ليلة الفيلا والسرّ المدفون",
+        story: "weekend في الحمامات. الضحية طلع لبيتو ومات مسموم. اللابتوب مكسور وكأس عصير مقلوبة.",
+        killerDesc: "اللي لابس polo رمادي، وكان ساكت أغلب السهرة",
         clues: [
-            { text: "الجاكيتة مقصوصة بسكين صغير.", img: images.weapon["سكينة"] },
-            { text: "سكين مطبخ ناقص من اليخت.", img: null },
-            { text: "الكاميرا تورّي وشم واضح.", img: images.generic },
-            { text: "آثار ملح على سروال (القاتل).", img: images.location["يخت"] }
+            { text: "الكأس فيها سم ما يتحط كان في السوائل الباردة.", img: images.weapon["سم"] },
+            { text: "في المطبخ، علبة دواء ناقصة حبة عند (القاتل).", img: null },
+            { text: "الكاميرا صورت (القاتل) داخل للمطبخ قبل 10 دقايق.", img: images.generic },
+            { text: "بحث في تلفون (القاتل) على: 'كيفاش السم يبان أزمة قلبية'.", img: null }
         ],
-        rumors: ["الضحية كان مديون.", "واحد قال 'يا ليتو يختفي'."],
-        secret: "ركّز الحديث على الديون."
+        rumors: ["واحد يغار من الضحية على طفلة.", "مولى الـ stories فسخ فيديو."],
+        secret: "شكك في السم وقول أزمة قلبية."
     },
-    // ... (Assume full list is here)
+    {
+        title: "المخيم اللي ما كملش",
+        story: "تخييم في عين دراهم. الضحية مشى يجيب حطب وتلقى مخنوق بحبل.",
+        killerDesc: "اللي كان دايماً يتحدّى الضحية",
+        clues: [
+            { text: "الحبل المستعمل موجود في شنطة (القاتل).", img: images.weapon["حبل"] },
+            { text: "آثار الأحذية في الطين تطابق صباط (القاتل).", img: images.location["غابة"] },
+            { text: "قطعة قماش من جاكيت (القاتل) في يد الضحية.", img: null },
+            { text: "رسالة تهديد في تلفون الضحية من عند (القاتل).", img: images.generic }
+        ],
+        rumors: ["واحد يغار من الضحية.", "سمعو عركة في الغابة."],
+        secret: "دافع على صاحب الحبل وقول يستعمل فيه للتخييم."
+    },
+    {
+        title: "العشاء اللي تسمّم فيه الكل",
+        story: "عيد ميلاد في المنزه. الكل كلا كيك، أما الضحية برك مات مسموم.",
+        killerDesc: "اللي قصّ الكيك بيدو",
+        clues: [
+            { text: "السم موجود كان في الطبقة العلوية لقطعة الضحية.", img: images.weapon["كيك"] },
+            { text: "قفازات بلاستيك ملوحة في poubelle متاع (القاتل).", img: null },
+            { text: "واحد شاف (القاتل) يبدّل صحن الضحية.", img: images.generic },
+            { text: "ميساج عند (القاتل): 'كان يبيع الدار نخسر كل شي'.", img: null }
+        ],
+        rumors: ["واحد محتاج فلوس الميراث.", "الضحية يبدل في الوصية."],
+        secret: "قول مستحيل يكون هو خاطر الكل كلاو."
+    },
+    {
+        title: "حادث في الطريق السريعة",
+        story: "حادث خايب في الرجوع من سوسة. الضحية مات والفرامل مقطوعة.",
+        killerDesc: "اللي كان يسوق الكرهبة اللي قدامو",
+        clues: [
+            { text: "liquide frein متاع الضحية ناقص بفعل فاعل.", img: images.weapon["frein"] },
+            { text: "نفس ماركة الزيت موجودة عند (القاتل).", img: null },
+            { text: "الكاميرا صورت (القاتل) يحل في capot الضحية.", img: images.generic },
+            { text: "ميساج تهديد: 'كان تحكي تو تندم'.", img: null }
+        ],
+        rumors: ["الضحية كان سكران.", "واحد يغار من نجاحو."],
+        secret: "شكك في الفرامل وقول عطب قديم."
+    },
+    {
+        title: "المكتب المسكّر من الداخل",
+        story: "انتحار ظاهري في شركة. الباب مسكر بالمفتاح والضحية مسموم.",
+        killerDesc: "الشخص اللي دايماً هادي",
+        clues: [
+            { text: "عقدة الحبل ما يعرفها كان (القاتل) اللي كان scout.", img: images.weapon["حبل"] },
+            { text: "كوب قهوة فيه مهدئ عطاه (القاتل) للضحية.", img: images.location["مكتب"] },
+            { text: "خيط رقيق تحت الباب استعملو (القاتل) لتسكير المفتاح.", img: images.generic },
+            { text: "الضحية كان باش يبعث mail يفضح (القاتل).", img: null }
+        ],
+        rumors: ["الضحية مكتئب.", "الموظف الجديد يسرق."],
+        secret: "ركز على الاكتئاب ودافع على (القاتل)."
+    }
 ];
 
 let players = {};
@@ -66,34 +114,36 @@ let gameStarted = false;
 let currentMystery = null;
 let currentClueIndex = 0;
 let intervals = [];
+let votes = {};
 
 app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'index.html')); });
 
 function pickMystery(playerList) {
     const template = mysteriesDB[Math.floor(Math.random() * mysteriesDB.length)];
-    const killer = playerList[Math.floor(Math.random() * playerList.length)];
 
-    // --- TWIST LOGIC: Pick a SCAPEGOAT (Someone innocent to frame) ---
-    let scapegoat = playerList.find(p => p.name !== killer.name);
-    if (!scapegoat) scapegoat = killer; // Fallback
+    // Ensure randomness in killer selection
+    // (If testing alone, playerList[0] is always killer. With >1 players, it's random)
+    const killerIndex = Math.floor(Math.random() * playerList.length);
+    const killer = playerList[killerIndex];
 
-    // Modify Clues to be tricky
+    // Twist Logic (Scapegoat)
+    let scapegoat = playerList.find((p, idx) => idx !== killerIndex);
+    if (!scapegoat) scapegoat = killer; 
+
+    // Inject Names
     let finalClues = template.clues.map((c, index) => {
         let newText = c.text;
-
-        // 50% chance to Frame the Scapegoat in early clues (Misdirection)
+        // 50% chance to Frame Scapegoat in first 2 clues
         if (index < 2 && Math.random() > 0.5) {
             newText = newText.replace("(القاتل)", scapegoat.name); 
             newText += " (لكن الدليل هذا مشكوك فيه...)"; 
         } else {
-            // Real clues pointing to killer
             newText = newText.replace("(القاتل)", killer.name);
         }
-
         return { text: newText, img: c.img };
     });
 
-    // Ensure the LAST clue is always true (The smoking gun)
+    // Smoking gun is always true
     finalClues[finalClues.length - 1].text = template.clues[template.clues.length - 1].text.replace("(القاتل)", killer.name);
 
     let finalRumors = template.rumors.map(r => r.replace("(القاتل)", killer.name));
@@ -124,6 +174,7 @@ io.on('connection', (socket) => {
 
         currentMystery = pickMystery(playerValues);
         gameStarted = true;
+        votes = {};
         intervals.forEach(clearInterval); intervals = [];
         currentClueIndex = 0;
 
@@ -135,7 +186,7 @@ io.on('connection', (socket) => {
                 io.to(p.id).emit('gameInit', { 
                     role: 'killer', 
                     title: currentMystery.title, 
-                    story: currentMystery.story + "\n🔴 وصفك: " + currentMystery.killerDesc 
+                    story: currentMystery.story + "\n🔴 أنت القاتل! حاول تبرر روحك وتتهم غيرك." 
                 });
             } else {
                 p.role = 'citizen';
@@ -157,7 +208,7 @@ io.on('connection', (socket) => {
     });
 
     function startLoops() {
-        // Clues Loop (Every 25s)
+        // Clues Loop (30s)
         const clueInt = setInterval(() => {
             if (!gameStarted) return;
             if (currentClueIndex < currentMystery.clues.length) {
@@ -171,50 +222,58 @@ io.on('connection', (socket) => {
                 io.emit('startVoting');
                 io.emit('playAudio', "وقت التصويت");
             }
-        }, 25000);
+        }, 30000);
         intervals.push(clueInt);
 
-        // Rumors Loop (Every 20s)
+        // Rumors Loop (25s)
         const rumorInt = setInterval(() => {
             if (!gameStarted) return;
             const rumor = currentMystery.rumors[Math.floor(Math.random() * currentMystery.rumors.length)];
             const pIds = Object.keys(players);
             const target = pIds[Math.floor(Math.random() * pIds.length)];
             io.to(target).emit('privateRumor', rumor);
-        }, 20000);
+        }, 25000);
         intervals.push(rumorInt);
     }
 
     socket.on('chatMessage', (msg) => {
         const p = players[socket.id];
-        if (p && !p.isDead) io.emit('newChat', { name: p.name, msg: msg });
+        // Allow dead players to chat? Maybe not. Let's keep it restrictive for now.
+        if (p) io.emit('newChat', { name: p.name, msg: msg });
     });
 
-    socket.on('killPlayer', (targetName) => {
-        const killer = players[socket.id];
-        if (!killer || killer.role !== 'killer' || killer.isDead) return;
-
-        const targetId = Object.keys(players).find(k => players[k].name === targetName);
-        if (targetId && !players[targetId].isDead) {
-            players[targetId].isDead = true;
-            io.emit('playerDied', { name: targetName });
-            io.to(targetId).emit('youDied');
-            io.emit('systemMessage', `🚨 **${targetName}** مات مقتول!`);
-            io.emit('playAudio', "جريمة قتل");
-            io.emit('startVoting');
-
-            const alive = Object.values(players).filter(p => !p.isDead).length;
-            if (alive <= 1) {
-                gameStarted = false; intervals.forEach(clearInterval);
-                io.emit('gameOver', { winner: 'killer', msg: `🔪 القاتل (${killer.name}) ربح!` });
-            }
-        }
-    });
+    // NO 'killPlayer' EVENT anymore.
+    // The killer wins by surviving the vote.
 
     socket.on('votePlayer', (targetName) => {
-        const player = players[socket.id];
-        if (!player || player.hasVoted) return;
-        player.hasVoted = true;
+        const voter = players[socket.id];
+        if (!voter || !gameStarted || voter.hasVoted) return;
+
+        voter.hasVoted = true;
+        votes[targetName] = (votes[targetName] || 0) + 1;
+
+        // Check if everyone voted
+        const allPlayers = Object.values(players);
+        const votesCast = allPlayers.filter(p => p.hasVoted).length;
+
+        if (votesCast >= allPlayers.length) {
+            // Tally votes
+            let maxVotes = 0;
+            let electedName = null;
+            for (const [name, count] of Object.entries(votes)) {
+                if (count > maxVotes) { maxVotes = count; electedName = name; }
+            }
+
+            // Reveal Result
+            intervals.forEach(clearInterval);
+            gameStarted = false;
+
+            if (electedName === currentMystery.killer) {
+                io.emit('gameOver', { winner: 'citizens', msg: `🎉 مبروك! شديتو القاتل (${currentMystery.killer})!` });
+            } else {
+                io.emit('gameOver', { winner: 'killer', msg: `😱 غالط! (${electedName}) كان بريء.. القاتل (${currentMystery.killer}) هرب!` });
+            }
+        }
     });
 
     socket.on('disconnect', () => {
