@@ -10,46 +10,25 @@ const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
 // --- CONFIG ---
+// ⚠️ تأكد أن هذا المفتاح جديد وصحيح
 const API_KEY = "AIzaSyDBDNnDyvUqdaySHOiRmeFJpfrXmSDHAJQ"; 
 const genAI = new GoogleGenerativeAI(API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+// استعملنا flash خاطر أسرع وأرخص في الـ Quota
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-// --- LOCAL MYSTERIES (BACKUP) ---
-// If AI fails, we use these high-quality pre-written stories.
+// --- BACKUP MYSTERIES (للطوارئ فقط) ---
 const backupMysteries = [
     {
-        title: "جريمة في الـ Colocation 🏠",
-        story: "الضو مقصوص، لقيتو (صالح) ميت في بيت القعاد مضروب بمقلاة.. شكون قتلو؟",
+        title: "جريمة الـ Offline (احتياطية)",
+        story: "الذكاء الاصطناعي تعب.. ياخي دورناها جريمة كلاسيكية. (صالح) تقتل في القهوة.",
         clues: [
-            "📜 تقرير: الضحية مات مضروب بحاجة ثقيلة.",
-            "🕵️ شهادة: الجار سمع عياط مع الـ 10 متاع الليل.",
-            "🔦 دليل: لقينا 'شلاكة' ملطخة بالدم تحت فرشك (القاتل).",
-            "📱 ميساج: الضحية كان يسال واحد فيكم برشا فلوس."
+            "الضحية مضروب بـ كاس تاي.",
+            "مولى القهوة شاف (القاتل) هارب.",
+            "القاتل نسى تليفونو فوق الطاولة.",
+            "القاتل هو (القاتل)."
         ],
-        rumors: [
-            "سمعت (فلان) يحكي في التليفون بالسرقة ويقول 'فسخت الأدلة'",
-            "ريت (فلان) يغسل في دبشو بالزربة",
-            "فما واحد فيكم يصور فيكم فيديو"
-        ],
-        secrets: [
-            { task: "دافع على (القاتل) في الشات وقول هو بريء." },
-            { task: "اتهم (فلان) زورا وبهتانا." }
-        ]
-    },
-    {
-        title: "سرقة القهوة ☕",
-        story: "مولى القهوة لقى الكاسة فارغة.. السارق واحد من السرفارة! لكن الحارس تقتل.",
-        clues: [
-            "🎥 كاميرا: الكاميرا تسكرت 5 دقائق قبل السرقة.",
-            "🔑 مفتاح: السارق استعمل مفتاح أصلي.",
-            "👣 أثر: فما طبعة سبادري (Nike) في الكوجينة.",
-            "💸 شهادة: واحد فيكم شرى iPhone جديد البارح."
-        ],
-        rumors: [
-            "فلان عنده مفتاح زايد متاع القهوة",
-            "ريت فلان مخبي فلوس في جيبو"
-        ],
-        secrets: []
+        rumors: ["فما شكون يسرق في الويفي", "ريت فلان يبدل في حوايجو"],
+        secrets: [{ task: "قول للناس الكل اللي انت شاكك في روحك" }]
     }
 ];
 
@@ -61,73 +40,86 @@ let intervals = [];
 
 app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'index.html')); });
 
-// --- AI FUNCTION ---
+// --- SMART AI FUNCTION ---
 async function generateMystery(playerList) {
     const playerNames = playerList.map(p => p.name).join(", ");
-
-    // Pick a random player as killer for fallback scenario
-    const randomKiller = playerList[Math.floor(Math.random() * playerList.length)].name;
+    const killerName = playerList[Math.floor(Math.random() * playerList.length)].name;
 
     const prompt = `
-    أنت كاتب سيناريو تونسي.
-    اللاعبين: [${playerNames}].
-    1. اختر قاتل من القائمة.
-    2. اكتب قصة جريمة تونسية (عرس، حومة، قهوة).
-    3. 4 أدلة متدرجة.
-    4. 3 إشاعات خبيثة.
-    5. 2 مهام سرية.
-    رد JSON فقط:
+    Role: Tunisian Mystery Writer.
+    Players: ${playerNames}.
+    Killer: ${killerName}.
+
+    Task: Write a murder mystery in Tunisian Dialect.
+    JSON Format ONLY:
     {
-      "title": "...", "story": "...", "killer": "...",
-      "clues": ["..."], "rumors": ["..."],
-      "secrets": [{ "player": "...", "task": "..." }]
+      "title": "Title in Tunisian",
+      "story": "Short story (max 30 words)",
+      "killer": "${killerName}",
+      "clues": ["Clue 1 (vague)", "Clue 2", "Clue 3", "Clue 4 (revealing but no name)"],
+      "rumors": ["Rumor 1", "Rumor 2"],
+      "secrets": [{"player": "Name", "task": "Secret Task"}]
     }
     `;
 
     try {
+        console.log("🤖 Sending request to Gemini...");
         const result = await model.generateContent(prompt);
-        const text = result.response.text().replace(/```json|```/g, "").trim();
-        return JSON.parse(text);
+        const text = result.response.text();
+        console.log("📩 Raw AI Response:", text); // Debug Log
+
+        // --- SMART CLEANER ---
+        // يلوج على أول { وآخر } باش ينحي أي كتيبة زايدة
+        const jsonStart = text.indexOf('{');
+        const jsonEnd = text.lastIndexOf('}') + 1;
+
+        if (jsonStart === -1 || jsonEnd === 0) throw new Error("No JSON found");
+
+        const cleanJson = text.substring(jsonStart, jsonEnd);
+        const mystery = JSON.parse(cleanJson);
+
+        // تأكد أن القاتل موجود في القائمة
+        if (!playerNames.includes(mystery.killer)) mystery.killer = killerName;
+
+        console.log("✅ Mystery Generated Successfully!");
+        return mystery;
+
     } catch (error) {
-        console.log("AI Failed, using backup mystery.");
-        // Pick a random backup mystery and inject the real killer
-        let backup = backupMysteries[Math.floor(Math.random() * backupMysteries.length)];
-        backup.killer = randomKiller; 
+        console.error("❌ AI Error:", error.message);
+        // Backup
+        let backup = backupMysteries[0];
+        backup.killer = killerName; 
         return backup;
     }
 }
 
 io.on('connection', (socket) => {
+  console.log('User joined:', socket.id);
 
   socket.on('joinGame', (name) => {
     if (gameStarted) return socket.emit('errorMsg', '⏳ الطرح بدا! استنى.');
-    // Check if name exists
-    if (Object.values(players).find(p => p.name === name)) {
-        return socket.emit('errorMsg', 'الاسم هذا موجود ديجا!');
-    }
-
     players[socket.id] = { id: socket.id, name: name, role: 'citizen', isDead: false, hasVoted: false };
     io.emit('updatePlayerList', Object.values(players));
   });
 
   socket.on('startGame', async () => {
     const playerValues = Object.values(players);
-    if (playerValues.length < 1) return io.emit('errorMsg', 'زيد دخل صحابك!'); // Min 1 for testing
+    // Allow 1 player for testing
+    if (playerValues.length < 1) return io.emit('errorMsg', 'زيد دخل صحابك!'); 
 
-    io.emit('loadingState', true); // Show loading screen
+    io.emit('loadingState', true);
     gameStarted = true;
 
-    // 1. Generate (AI or Backup)
+    // Generate Mystery
     currentMystery = await generateMystery(playerValues);
 
-    // 2. Assign Roles
+    // Reset & Assign
     intervals.forEach(clearInterval); intervals = [];
     currentClueIndex = 0;
 
     playerValues.forEach(p => {
         p.isDead = false; p.hasVoted = false;
 
-        // Role
         if (p.name === currentMystery.killer) {
             p.role = 'killer';
             io.to(p.id).emit('gameInit', { role: 'killer', data: currentMystery });
@@ -136,17 +128,15 @@ io.on('connection', (socket) => {
             io.to(p.id).emit('gameInit', { role: 'citizen', data: currentMystery });
         }
 
-        // Secrets
-        if (currentMystery.secrets) {
+        if (currentMystery.secrets && currentMystery.secrets.length > 0) {
             const secret = currentMystery.secrets.find(s => s.player === p.name);
             if (secret && p.role !== 'killer') io.to(p.id).emit('secretTask', secret.task);
         }
     });
 
-    io.emit('loadingState', false); // Hide loading
+    io.emit('loadingState', false);
     io.emit('systemMessage', `🚨 **${currentMystery.title}** 🚨\n${currentMystery.story}`);
 
-    // 3. Loops
     startLoops();
   });
 
@@ -156,11 +146,10 @@ io.on('connection', (socket) => {
           if (!gameStarted) return;
           if (currentClueIndex < currentMystery.clues.length) {
               let clue = currentMystery.clues[currentClueIndex];
-              // Replace placeholder
               if (clue.includes("(القاتل)")) clue = clue.replace("(القاتل)", currentMystery.killer);
 
               io.emit('newClue', clue);
-              io.emit('playAudio', "دليل جديد وصل"); 
+              io.emit('playAudio', "دليل جديد"); 
               currentClueIndex++;
           } else {
               clearInterval(clueInt);
@@ -168,7 +157,7 @@ io.on('connection', (socket) => {
               io.emit('startVoting');
               io.emit('playAudio', "وقت التصويت");
           }
-      }, 30000);
+      }, 30000); // 30s
       intervals.push(clueInt);
 
       // Rumors Loop
@@ -177,9 +166,8 @@ io.on('connection', (socket) => {
           const rumor = currentMystery.rumors[Math.floor(Math.random() * currentMystery.rumors.length)];
           const pIds = Object.keys(players);
           const target = pIds[Math.floor(Math.random() * pIds.length)];
-          // Send to random player (Private)
           io.to(target).emit('privateRumor', rumor);
-      }, 20000);
+      }, 20000); // 20s
       intervals.push(rumorInt);
   }
 
@@ -199,21 +187,19 @@ io.on('connection', (socket) => {
           io.to(targetId).emit('youDied');
           io.emit('systemMessage', `🚨 **${targetName}** مات مقتول!`);
           io.emit('playAudio', "جريمة قتل");
-          io.emit('startVoting'); // Auto meeting
+          io.emit('startVoting'); 
 
-          // Win Check
           const alive = Object.values(players).filter(p => !p.isDead).length;
           if (alive <= 1) endGame('killer', killer.name);
       }
   });
 
-  // Vote Logic (Simplified)
   socket.on('votePlayer', (targetName) => {
-      // ... (Same vote logic as before, just triggering endGame)
       const player = players[socket.id];
       if (!player || player.hasVoted) return;
       player.hasVoted = true;
-      // ... (omitted for brevity, assume standard voting logic)
+      // Simple logic: just acknowledge vote for now
+      // In real game: implement tally logic here
   });
 
   function endGame(winner, name) {
