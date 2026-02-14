@@ -4,217 +4,175 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تحقيق تونسي 🇹🇳</title>
+    <title>تحقيق تونسي (AI) 🇹🇳</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
 
-        body { font-family: 'Cairo', sans-serif; background-color: #121212; color: #eee; text-align: center; margin: 0; padding: 0; overflow: hidden; }
-        .screen { display: none; padding: 20px; height: 100vh; box-sizing: border-box; flex-direction: column; }
+        body { font-family: 'Cairo', sans-serif; background-color: #0d0d0d; color: #e0e0e0; text-align: center; margin: 0; overflow: hidden; }
+        .screen { display: none; padding: 20px; height: 100vh; flex-direction: column; }
         .active { display: flex !important; }
 
-        h1, h2 { color: #e74c3c; margin: 10px 0; }
-        input, select { padding: 15px; margin: 10px 0; border-radius: 8px; border: none; width: 90%; font-size: 16px; text-align: center; background: #333; color: white; }
-        button { padding: 15px; margin: 10px 0; border-radius: 8px; cursor: pointer; border: none; font-size: 18px; font-weight: bold; width: 90%; transition: 0.2s; }
-        .btn-primary { background-color: #c0392b; color: white; }
-        .btn-vote { background-color: #f39c12; color: black; }
+        h1, h2 { color: #c0392b; margin: 10px 0; text-shadow: 0 0 10px rgba(192, 57, 43, 0.5); }
+        input, button, select { padding: 12px; margin: 8px 0; border-radius: 6px; border: none; width: 100%; font-size: 16px; box-sizing: border-box; }
+        input, select { background: #333; color: white; text-align: center; }
+        button { cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-primary { background: #c0392b; color: white; }
+        .btn-vote { background: #f39c12; color: black; }
 
-        #chat-container { flex-grow: 1; overflow-y: auto; background: #1e1e1e; border-radius: 10px; padding: 10px; margin-bottom: 10px; text-align: right; border: 1px solid #333; }
-        .message { margin-bottom: 8px; padding: 8px; border-radius: 5px; background: #2c3e50; font-size: 14px; }
-        .clue-msg { background: #d35400; color: #fff; border-left: 4px solid #f1c40f; }
-        .sys-msg { background: #8e44ad; color: white; text-align: center; font-size: 12px; }
+        #chat-container { flex-grow: 1; overflow-y: auto; background: #1a1a1a; border-radius: 10px; padding: 10px; margin-bottom: 10px; text-align: right; border: 1px solid #333; }
+        .message { margin-bottom: 8px; padding: 10px; border-radius: 6px; background: #2c3e50; font-size: 14px; line-height: 1.4; }
+        .clue-msg { background: #d35400; color: #fff; border-right: 4px solid #f1c40f; }
+        .rumor-msg { background: #8e44ad; color: #fff; border-right: 4px solid #9b59b6; font-style: italic; }
+        .sys-msg { background: #222; color: #bbb; text-align: center; font-size: 12px; border: 1px solid #444; }
+        .secret-task { background: #27ae60; color: white; padding: 10px; margin-bottom: 10px; border-radius: 5px; font-weight: bold; border: 1px dashed #fff; animation: pulse 2s infinite; }
 
-        .role-card { padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 2px solid #555; background: #222; }
+        .role-card { padding: 15px; border-radius: 10px; margin-bottom: 10px; background: #222; border: 1px solid #444; }
         .killer-role { border-color: #c0392b; color: #e74c3c; }
-        .citizen-role { border-color: #27ae60; color: #2ecc71; }
 
-        /* Cooldown Overlay for Button */
+        @keyframes pulse { 0% { opacity: 0.8; } 50% { opacity: 1; } 100% { opacity: 0.8; } }
         .disabled-btn { opacity: 0.5; pointer-events: none; background: #555 !important; }
-
     </style>
 </head>
 <body>
 
-    <!-- 1. LOBBY -->
+    <!-- LOBBY -->
     <div id="lobby-screen" class="screen active">
-        <h1>🕵️ المحقق التونسي 🇹🇳</h1>
-        <p>مرحبا بيك في أخطر لعبة تحقيق..</p>
-        <input type="text" id="username" placeholder="اسمك (باش يعرفوك صحابك)" />
-        <button class="btn-primary" onclick="joinGame()">دخول للغرفة</button>
+        <h1>👁️ المؤامرة (AI) 🇹🇳</h1>
+        <p>لعبة نفسية خبيثة.. الثقة ممنوعة.</p>
+        <input type="text" id="username" placeholder="اسمك..." />
+        <button class="btn-primary" onclick="joinGame()">دخول</button>
 
-        <div style="flex-grow: 1; overflow-y: auto; width: 100%;">
-            <h3>شكون دخل:</h3>
+        <div style="flex-grow: 1; overflow-y: auto; width: 100%; margin-top: 20px;">
+            <h3>الضحايا المحتملين:</h3>
             <ul id="player-list" style="list-style: none; padding: 0;"></ul>
         </div>
 
-        <div id="admin-controls" style="margin-top: auto; width: 100%;">
-            <label>اختار السيناريو:</label>
-            <select id="case-select">
-                <option value="1">جريمة في الـ Colocation 🏠</option>
-                <option value="2">سرقة القهوة ☕</option>
-            </select>
-            <button class="btn-primary" style="background: #27ae60;" onclick="startGame()">🚀 ابدا الطرح (2+)</button>
-        </div>
+        <button class="btn-primary" style="background: #27ae60; margin-top: auto;" onclick="startGame()">🚀 ابدا الرعب (2+)</button>
     </div>
 
-    <!-- 2. GAMEPLAY -->
+    <!-- GAMEPLAY -->
     <div id="game-screen" class="screen">
-        <!-- Role Header -->
         <div id="role-display" class="role-card">
             <h2 id="role-title" style="margin:0;">...</h2>
-            <p id="case-story" style="color: #bbb; font-size: 0.9em; margin: 5px 0;">...</p>
+            <p id="case-story" style="color: #bbb; font-size: 0.85em; margin: 5px 0;">...</p>
         </div>
 
-        <!-- Chat Area -->
+        <div id="secret-area" style="display:none;" class="secret-task">
+            🤫 مهمة سرية: <span id="secret-text"></span>
+        </div>
+
         <div id="chat-container"></div>
 
-        <!-- Input Area -->
-        <div style="display: flex; width: 100%;">
-            <input type="text" id="msg-input" placeholder="اكتب حاجة..." style="width: 70%; margin: 5px;" />
-            <button onclick="sendMessage()" class="btn-primary" style="width: 25%; margin: 5px; font-size: 14px;">ابعث</button>
+        <div style="display: flex;">
+            <input type="text" id="msg-input" placeholder="اكتب..." style="width: 75%; margin-left: 5px;" />
+            <button onclick="sendMessage()" class="btn-primary" style="width: 25%;">ابعث</button>
         </div>
 
-        <!-- KILLER Actions -->
-        <div id="killer-controls" style="display:none; width: 100%; margin-top: 10px; border-top: 1px solid #444; padding-top: 10px;">
-            <select id="target-select" style="width: 100%; background: #444;">
-                <option value="" disabled selected>اختار الضحية...</option>
-            </select>
-            <button id="kill-btn" class="btn-primary" onclick="killPlayer()">🔪 اقتل تو!</button>
-            <p id="cooldown-msg" style="color: #e74c3c; font-size: 12px; display: none;">⏳ السلاح سخون.. استنى شوي</p>
+        <div id="killer-controls" style="display:none; margin-top: 10px; border-top: 1px solid #444; padding-top: 5px;">
+            <select id="target-select"><option value="" disabled selected>الضحية...</option></select>
+            <button id="kill-btn" class="btn-primary" onclick="killPlayer()">🔪 تصفية</button>
+            <p id="cooldown-msg" style="color: #e74c3c; font-size: 12px; display: none;">⏳ Cooldown...</p>
         </div>
 
-        <!-- VOTING Actions -->
-        <div id="vote-controls" style="display:none; width: 100%; margin-top: 10px; background: #2980b9; padding: 10px; border-radius: 8px;">
-            <h3 style="color:white; margin:0;">🗳️ شكون القاتل؟</h3>
-            <select id="vote-select" style="width: 100%; background: #fff; color: #000;">
-                 <option value="" disabled selected>صوّت على المشتبه فيه...</option>
-            </select>
-            <button class="btn-vote" onclick="votePlayer()">تأكيد التصويت</button>
+        <div id="vote-controls" style="display:none; margin-top: 10px; background: #2980b9; padding: 10px; border-radius: 8px;">
+            <select id="vote-select"><option value="" disabled selected>المشتبه فيه...</option></select>
+            <button class="btn-vote" onclick="votePlayer()">إعدام</button>
         </div>
     </div>
 
-    <!-- 3. DEAD SCREEN -->
-    <div id="dead-screen" class="screen" style="justify-content: center; background: #4a0000;">
-        <h1 style="font-size: 4em;">💀 متّ!</h1>
-        <p>الله يرحمك.. كمل تفرج فيهم ساكت.</p>
+    <!-- SCREENS -->
+    <div id="dead-screen" class="screen" style="justify-content: center; background: #300;">
+        <h1>💀 Game Over</h1>
+        <p>لقد تم إقصاؤك.</p>
     </div>
-
-    <!-- 4. WIN SCREEN -->
-    <div id="win-screen" class="screen" style="justify-content: center; background: #1a1a1a;">
+    <div id="win-screen" class="screen" style="justify-content: center;">
         <h1 id="win-msg" style="color: #f1c40f;"></h1>
-        <button class="btn-primary" onclick="location.reload()">🔄 طرح جديد</button>
+        <button class="btn-primary" onclick="location.reload()">🔄 Replay</button>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
         let myRole = '';
-        let playersList = [];
 
-        // --- Core Functions ---
+        // --- TTS Helper (Audio) ---
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'ar-TN'; // Try Tunisian/Arabic
+                utterance.rate = 0.9;
+                utterance.pitch = 0.8; // Deep voice
+                window.speechSynthesis.speak(utterance);
+            }
+        }
 
+        // --- Core ---
         function joinGame() {
             const name = document.getElementById('username').value;
-            if(name) {
-                socket.emit('joinGame', name);
-                document.getElementById('username').disabled = true;
-                // document.querySelector('button[onclick="joinGame()"]').style.display = 'none';
-            } else {
-                alert("اكتب اسمك يهديك!");
-            }
+            if(name) { socket.emit('joinGame', name); document.getElementById('username').disabled = true; }
         }
-
-        function startGame() {
-            const caseId = document.getElementById('case-select').value;
-            socket.emit('startGame', caseId);
-        }
-
+        function startGame() { socket.emit('startGame'); }
         function sendMessage() {
-            const msgInput = document.getElementById('msg-input');
-            const msg = msgInput.value;
-            if(msg) {
-                socket.emit('chatMessage', msg);
-                msgInput.value = '';
-            }
+            const val = document.getElementById('msg-input').value;
+            if(val) { socket.emit('chatMessage', val); document.getElementById('msg-input').value = ''; }
         }
-
         function killPlayer() {
             const target = document.getElementById('target-select').value;
-            if(!target) return alert("اختار شكون باش تقتل الساعة!");
-
-            if(confirm("متأكد تحب تقتل " + target + "؟")) {
-                socket.emit('killPlayer', target);
-            }
+            if(target && confirm("Kill " + target + "?")) socket.emit('killPlayer', target);
         }
-
         function votePlayer() {
             const target = document.getElementById('vote-select').value;
-            if(!target) return alert("اختار شكون باش تصوت عليه!");
-
-            socket.emit('votePlayer', target);
-            document.getElementById('vote-controls').style.display = 'none'; // Hide after vote
+            if(target) { socket.emit('votePlayer', target); document.getElementById('vote-controls').style.display = 'none'; }
         }
 
         function updateDropdowns(players) {
-            // Update Killer & Vote Dropdowns
-            const killSelect = document.getElementById('target-select');
-            const voteSelect = document.getElementById('vote-select');
-
-            // Clear current
-            killSelect.innerHTML = '<option value="" disabled selected>اختار الضحية...</option>';
-            voteSelect.innerHTML = '<option value="" disabled selected>صوّت على...</option>';
+            const user = document.getElementById('username').value;
+            const killSel = document.getElementById('target-select');
+            const voteSel = document.getElementById('vote-select');
+            killSel.innerHTML = voteSel.innerHTML = '<option value="" disabled selected>...</option>';
 
             players.forEach(p => {
-                if(!p.isDead && p.name !== document.getElementById('username').value) {
-                    // Add to dropdowns
-                    const opt1 = document.createElement('option');
-                    opt1.value = p.name;
-                    opt1.innerText = p.name;
-                    killSelect.appendChild(opt1);
-
-                    const opt2 = document.createElement('option');
-                    opt2.value = p.name;
-                    opt2.innerText = p.name;
-                    voteSelect.appendChild(opt2);
+                if(!p.isDead && p.name !== user) {
+                    const opt = `<option value="${p.name}">${p.name}</option>`;
+                    killSel.innerHTML += opt;
+                    voteSel.innerHTML += opt;
                 }
             });
         }
 
-        // --- Socket Events ---
-
+        // --- Events ---
         socket.on('updatePlayerList', (players) => {
-            playersList = players;
             const list = document.getElementById('player-list');
-            list.innerHTML = players.map(p => 
-                `<li style="padding: 10px; border-bottom: 1px solid #444; display:flex; justify-content:space-between;">
-                    <span>👤 ${p.name}</span>
-                    <span style="font-size:0.8em; color:#777;">${p.isDead ? '💀 ميت' : '✅ حي'}</span>
-                </li>`
-            ).join('');
-
-            // Update dropdowns dynamically
+            list.innerHTML = players.map(p => `<li>👤 ${p.name} ${p.isDead ? '💀' : ''}</li>`).join('');
             updateDropdowns(players);
         });
-
-        socket.on('errorMsg', (msg) => alert(msg));
 
         socket.on('gameInit', (data) => {
             document.getElementById('lobby-screen').classList.remove('active');
             document.getElementById('game-screen').classList.add('active');
-
             myRole = data.role;
-            const roleTitle = document.getElementById('role-title');
-            const roleCard = document.getElementById('role-display');
+
+            const title = document.getElementById('role-title');
+            const card = document.getElementById('role-display');
 
             if (myRole === 'killer') {
-                roleTitle.innerText = "🔪 أنت القاتل!";
-                roleCard.classList.add('killer-role');
+                title.innerText = "🔪 أنت القاتل";
+                card.classList.add('killer-role');
                 document.getElementById('killer-controls').style.display = 'block';
             } else {
-                roleTitle.innerText = "🕵️ أنت مواطن بريء";
-                roleCard.classList.add('citizen-role');
+                title.innerText = "🕵️ أنت بريء";
                 document.getElementById('killer-controls').style.display = 'none';
             }
             document.getElementById('case-story').innerText = data.caseTitle + "\n" + data.story;
+            speak("بدأت اللعبة. " + data.caseTitle);
+        });
+
+        socket.on('secretTask', (task) => {
+            const area = document.getElementById('secret-area');
+            const text = document.getElementById('secret-text');
+            area.style.display = 'block';
+            text.innerText = task;
+            speak("عندك مهمة سرية.");
         });
 
         socket.on('newChat', (data) => {
@@ -227,41 +185,48 @@
             const box = document.getElementById('chat-container');
             box.innerHTML += `<div class="message clue-msg">💡 <strong>دليل:</strong> ${clue}</div>`;
             box.scrollTop = box.scrollHeight;
-            if(navigator.vibrate) navigator.vibrate([200, 100, 200]);
+        });
+
+        socket.on('privateRumor', (rumor) => {
+            const box = document.getElementById('chat-container');
+            box.innerHTML += `<div class="message rumor-msg">🤫 <strong>إشاعة (ليك وحدك):</strong> ${rumor}</div>`;
+            box.scrollTop = box.scrollHeight;
+            if(navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 100]);
+            speak("وصلتك إشاعة سرية.");
+        });
+
+        socket.on('playAudio', (text) => {
+            speak(text);
         });
 
         socket.on('systemMessage', (msg) => {
             const box = document.getElementById('chat-container');
-            const formattedMsg = msg.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
-            box.innerHTML += `<div class="message sys-msg">${formattedMsg}</div>`;
+            box.innerHTML += `<div class="message sys-msg">${msg.replace(/\n/g, '<br>')}</div>`;
             box.scrollTop = box.scrollHeight;
         });
 
         socket.on('startVoting', () => {
             document.getElementById('vote-controls').style.display = 'block';
-            // Vibrate to alert
-            if(navigator.vibrate) navigator.vibrate(500);
+            speak("وقت التصويت.");
         });
 
-        socket.on('cooldownStart', (seconds) => {
+        socket.on('cooldownStart', (sec) => {
             const btn = document.getElementById('kill-btn');
-            const msg = document.getElementById('cooldown-msg');
             btn.classList.add('disabled-btn');
-            btn.innerText = `استنى (${seconds}s)`;
-            msg.style.display = 'block';
+            btn.innerText = `Wait ${sec}s`;
+            document.getElementById('cooldown-msg').style.display = 'block';
         });
 
         socket.on('cooldownEnd', () => {
             const btn = document.getElementById('kill-btn');
-            const msg = document.getElementById('cooldown-msg');
             btn.classList.remove('disabled-btn');
-            btn.innerText = "🔪 اقتل تو!";
-            msg.style.display = 'none';
+            btn.innerText = "🔪 تصفية";
+            document.getElementById('cooldown-msg').style.display = 'none';
         });
 
         socket.on('playerDied', (data) => {
             const box = document.getElementById('chat-container');
-            box.innerHTML += `<div class="message" style="background: #c0392b; color: white;">☠️ <strong>${data.name}</strong> مات!</div>`;
+            box.innerHTML += `<div class="message" style="background: darkred; color: white;">💀 ${data.name} مات!</div>`;
         });
 
         socket.on('youDied', () => {
